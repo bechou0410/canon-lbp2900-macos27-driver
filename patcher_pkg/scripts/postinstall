@@ -10,6 +10,7 @@ FILTER="/usr/libexec/cups/filter/rastertocapt"
 PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.ppd"
 QUEUE="Canon_LBP2900"
 STATUS_MONITOR="/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
+STATUS_MONITOR_ID="jp.co.canon.CUPSCAPT2.StatusMonitor"
 
 /usr/bin/find /usr/libexec/cups -name '._*' -delete 2>/dev/null || true
 /usr/bin/find /Library/Printers -name '._*' -delete 2>/dev/null || true
@@ -23,6 +24,21 @@ if [ -d "$STATUS_MONITOR" ]; then
   echo "Detected Canon CAPT StatusMonitor from the original driver."
 else
   echo "Warning: Canon CAPT StatusMonitor was not found. Printing can still work, but install Canon's LBP3000/CAPT driver first if you need StatusMonitor."
+fi
+
+CURRENT_USER="$(/usr/bin/stat -f %Su /dev/console 2>/dev/null || true)"
+CURRENT_UID="$(/usr/bin/stat -f %u /dev/console 2>/dev/null || echo 0)"
+if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" != "0" ]; then
+  USER_HOME="$(/usr/bin/dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | /usr/bin/awk '{print $2}')"
+  if [ -n "$USER_HOME" ]; then
+    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowHeight 2>/dev/null || true
+    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowOriginX 2>/dev/null || true
+    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowOriginY 2>/dev/null || true
+    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowWidth 2>/dev/null || true
+    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults write "$STATUS_MONITOR_ID" NSQuitAlwaysKeepsWindows -bool false 2>/dev/null || true
+    /bin/rm -rf "$USER_HOME/Library/Saved Application State/$STATUS_MONITOR_ID.savedState"
+    echo "Reset StatusMonitor persistent UI state for $CURRENT_USER."
+  fi
 fi
 
 USB_URI="$(/usr/sbin/lpinfo -v 2>/dev/null | /usr/bin/awk 'index($2, "usb://Canon/LBP2900") == 1 {print $2; exit}')"

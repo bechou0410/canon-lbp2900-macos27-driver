@@ -61,6 +61,20 @@ lpstat -t
 
 If CUPS says the job completed but no paper comes out, power-cycle the printer, unplug USB for 10 seconds, reconnect USB, then print again.
 
+If Canon CAPT StatusMonitor crashes on launch, reset its saved window state:
+
+```sh
+defaults delete jp.co.canon.CUPSCAPT2.StatusMonitor SUIWindowHeight 2>/dev/null || true
+defaults delete jp.co.canon.CUPSCAPT2.StatusMonitor SUIWindowOriginX 2>/dev/null || true
+defaults delete jp.co.canon.CUPSCAPT2.StatusMonitor SUIWindowOriginY 2>/dev/null || true
+defaults delete jp.co.canon.CUPSCAPT2.StatusMonitor SUIWindowWidth 2>/dev/null || true
+defaults write jp.co.canon.CUPSCAPT2.StatusMonitor NSQuitAlwaysKeepsWindows -bool false
+rm -rf ~/Library/"Saved Application State"/jp.co.canon.CUPSCAPT2.StatusMonitor.savedState
+open -n /Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app
+```
+
+The patcher also performs this reset during installation for the current console user.
+
 Installer log:
 
 ```text
@@ -70,6 +84,7 @@ Installer log:
 ## Rebuild
 
 ```sh
+./tools/build-rastertocapt.sh
 ./tools/build-lbp3000-patcher-pkg.sh
 ```
 

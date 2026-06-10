@@ -31,6 +31,31 @@
 static uint8_t capt_iobuf[0x10000];
 static size_t  capt_iosize;
 
+enum {
+	CAPT_SEND_CHUNK = 4096,
+	CAPT_DRAIN_INTERVAL = 16384,
+};
+
+static void capt_drain_output(void)
+{
+	cups_sc_status_t status;
+	uint8_t tmpbuf[128];
+	size_t tmpsize = sizeof(tmpbuf);
+
+	status = cupsSideChannelDoRequest(CUPS_SC_CMD_DRAIN_OUTPUT,
+			(char *) tmpbuf, (int *) &tmpsize, 1.0);
+	if (status != CUPS_SC_STATUS_OK) {
+		if (status == CUPS_SC_STATUS_TIMEOUT) {
+			/* Overcome race conditions in usb backend */
+			fprintf(stderr, "DEBUG: CAPT: output already empty, not drained\n");
+		} else {
+			fprintf(stderr, "ERROR: CAPT: no reply from backend, err=%i\n",
+				(int) status);
+			exit(1);
+		}
+	}
+}
+
 static void capt_debug_buf(const char *level, size_t size)
 {
 	size_t i;
@@ -57,30 +82,17 @@ static void capt_send_buf(void)
 	}
 
 	while (iosize) {
-		cups_sc_status_t status;
-		uint8_t tmpbuf[128];
-		size_t tmpsize = sizeof(tmpbuf);
 		size_t sendsize = iosize;
-		if (sendsize > 4096)
-			sendsize = 4096;
+		if (sendsize > CAPT_SEND_CHUNK)
+			sendsize = CAPT_SEND_CHUNK;
 
 		fwrite(iopos, 1, sendsize, stdout);
 		iopos += sendsize;
 		iosize -= sendsize;
 		fflush(stdout);
 
-		status = cupsSideChannelDoRequest(CUPS_SC_CMD_DRAIN_OUTPUT,
-				(char *) tmpbuf, (int *) &tmpsize, 1.0);
-		if (status != CUPS_SC_STATUS_OK) {
-			if (status == CUPS_SC_STATUS_TIMEOUT) {
-				/* Overcome race conditions in usb backend */
-				fprintf(stderr, "DEBUG: CAPT: output already empty, not drained\n");
-			} else {
-				fprintf(stderr, "ERROR: CAPT: no reply from backend, err=%i\n",
-					(int) status);
-				exit(1);
-			}
-		}
+		if (iosize == 0 || ((iopos - capt_iobuf) % CAPT_DRAIN_INTERVAL) == 0)
+			capt_drain_output();
 	}
 }
 
@@ -202,4 +214,3 @@ void capt_multi_send(void)
 	capt_iobuf[3] = HI(capt_iosize);
 	capt_send_buf();
 }
-

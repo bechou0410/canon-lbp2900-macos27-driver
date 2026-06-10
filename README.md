@@ -36,6 +36,10 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Creates and enables a fresh `Canon_LBP2900` USB queue.
 - Sets A4 as the default paper size.
 
+## Balanced Speed Mode
+
+The bundled `rastertocapt` filter is tuned for a balance between speed and stability on macOS 27. It still waits for printer status at safe page boundaries, but it drains the USB backend less aggressively while streaming print data. This reduces avoidable USB handshakes without removing the CAPT status checks that keep LBP2900 prints reliable.
+
 ## Verify
 
 ```sh
@@ -69,7 +73,7 @@ Installer log:
 ./tools/build-lbp3000-patcher-pkg.sh
 ```
 
-The rebuilt package will be written to:
+This compiles the balanced `rastertocapt` filter from `third_party/captdriver/src`, copies it into the patcher payload, then writes the package to:
 
 ```text
 dist/CanonLBP2900-macOS27-lbp3000-patcher.pkg
@@ -78,3 +82,7 @@ dist/CanonLBP2900-macOS27-lbp3000-patcher.pkg
 ## Notes
 
 Canon's proprietary CAPT `capdftopdl` filter returned `unsupportedsize` during macOS 27 testing. This patcher uses the open CAPT raster filter path instead.
+
+## Acknowledgements
+
+Thanks to Codex for assisting with testing, packaging, and release notes.

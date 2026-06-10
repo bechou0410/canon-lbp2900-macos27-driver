@@ -36,6 +36,10 @@
 
 uint16_t job;
 
+enum {
+	LBP2900_FINAL_STATUS_POLL_SECONDS = 2,
+};
+
 struct printer_gpio_s {
 	const uint8_t (*init);
 	const uint8_t (*blink);
@@ -350,33 +354,49 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 
 	send_job_start(6, status->page_decoding);
 
-	while (1) {
-		const struct capt_status_s *status = lbp2900_get_status(state->ops);
+	for (unsigned int i = 0; i <= LBP2900_FINAL_STATUS_POLL_SECONDS; i++) {
+		status = lbp2900_get_status(state->ops);
 		/* Interesting. Using page_printing here results in shifted print */
 		if (status->page_out == status->page_decoding)
 			return true;
 		if (FLAG(status, CAPT_FL_NOPAPER2) || FLAG(status, CAPT_FL_NOPAPER1)) {
 			fprintf(stderr, "DEBUG: CAPT: no paper\n");
-			if (FLAG(status, CAPT_FL_PRINTING) || FLAG(status, CAPT_FL_PROCESSING1))
+			if (FLAG(status, CAPT_FL_PRINTING) || FLAG(status, CAPT_FL_PROCESSING1)) {
+				sleep(1);
 				continue;
+			}
 			return false;
 		}
-		sleep(1);
+		if (i < LBP2900_FINAL_STATUS_POLL_SECONDS)
+			sleep(1);
 	}
+
+	fprintf(stderr,
+			"DEBUG: CAPT: page-out status did not settle within %u seconds; finishing job handoff\n",
+			LBP2900_FINAL_STATUS_POLL_SECONDS);
+	return true;
 }
 
 static void lbp2900_job_epilogue(struct printer_state_s *state)
 {
 	uint8_t jbuf[2] = { LO(job), HI(job) };
+	const struct capt_status_s *status = NULL;
 
-	while (1) {
-		const struct capt_status_s *status = lbp2900_get_status(state->ops);
+	for (unsigned int i = 0; i <= LBP2900_FINAL_STATUS_POLL_SECONDS; i++) {
+		status = lbp2900_get_status(state->ops);
 		if (status->page_completed == status->page_decoding) {
 			send_job_start(4, status->page_completed);
-			break;
+			capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
+			return;
 		}
-		sleep(1);
+		if (i < LBP2900_FINAL_STATUS_POLL_SECONDS)
+			sleep(1);
 	}
+
+	fprintf(stderr,
+			"DEBUG: CAPT: page-completed status did not settle within %u seconds; ending job with decoded page counter\n",
+			LBP2900_FINAL_STATUS_POLL_SECONDS);
+	send_job_start(4, status->page_decoding);
 	capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
 }
 

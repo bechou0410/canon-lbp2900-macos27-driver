@@ -4,3 +4,4 @@
 build/
 tmp/
 *.xattr
+dist/Canon-CAPT-runtime-restore-local.pkg

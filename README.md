@@ -31,7 +31,7 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 
 - Keeps Canon's original LBP3000/CAPT driver files in place.
 - Installs the open `rastertocapt` CUPS filter.
-- Installs `CanonLBP2900-open-capt.ppd`.
+- Installs `CanonLBP2900-open-capt.ppd`, with Canon CAPT metadata so Canon CAPT StatusMonitor can detect the `Canon_LBP2900` queue.
 - Removes old conflicting queues named `Canon_LBP2900`, `Canon_LBP2900_Open`, `Canon_LBP2900_2`, `Canon_LBP3000_Status`, and `Canon_LBP3000`.
 - Creates and enables a fresh `Canon_LBP2900` USB queue.
 - Sets A4 as the default paper size.
@@ -74,6 +74,14 @@ open -n /Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app
 ```
 
 The patcher also performs this reset during installation for the current console user.
+
+If StatusMonitor opens but no status window appears, reinstall Canon's original LBP3000/CAPT driver first, then run this patcher again. Printing only needs the patched open filter, but StatusMonitor still depends on Canon's original CAPT runtime folders under:
+
+```text
+/Library/Printers/Canon/CUPSCAPT2
+```
+
+The patcher does not include those Canon proprietary runtime files.
 
 Installer log:
 

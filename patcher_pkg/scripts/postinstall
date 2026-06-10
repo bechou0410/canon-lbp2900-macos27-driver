@@ -11,6 +11,7 @@ PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.ppd"
 QUEUE="Canon_LBP2900"
 STATUS_MONITOR="/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
 STATUS_MONITOR_ID="jp.co.canon.CUPSCAPT2.StatusMonitor"
+CAPT_ROOT="/Library/Printers/Canon/CUPSCAPT2"
 
 /usr/bin/find /usr/libexec/cups -name '._*' -delete 2>/dev/null || true
 /usr/bin/find /Library/Printers -name '._*' -delete 2>/dev/null || true
@@ -26,6 +27,22 @@ else
   echo "Warning: Canon CAPT StatusMonitor was not found. Printing can still work, but install Canon's LBP3000/CAPT driver first if you need StatusMonitor."
 fi
 
+MISSING_CAPT_RUNTIME=0
+for path in \
+  "$CAPT_ROOT/Bidi/captemon" \
+  "$CAPT_ROOT/Bins" \
+  "$CAPT_ROOT/Libs" \
+  "$CAPT_ROOT/Recipe" \
+  "$CAPT_ROOT/PDEs"; do
+  if [ ! -e "$path" ]; then
+    echo "Warning: missing Canon CAPT runtime path: $path"
+    MISSING_CAPT_RUNTIME=1
+  fi
+done
+if [ "$MISSING_CAPT_RUNTIME" = "1" ]; then
+  echo "Warning: StatusMonitor may open without a status window until Canon's original CAPT runtime is reinstalled."
+fi
+
 CURRENT_USER="$(/usr/bin/stat -f %Su /dev/console 2>/dev/null || true)"
 CURRENT_UID="$(/usr/bin/stat -f %u /dev/console 2>/dev/null || echo 0)"
 if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" != "0" ]; then
@@ -36,6 +53,7 @@ if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" !
     /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowOriginY 2>/dev/null || true
     /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowWidth 2>/dev/null || true
     /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults write "$STATUS_MONITOR_ID" NSQuitAlwaysKeepsWindows -bool false 2>/dev/null || true
+    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults write "$STATUS_MONITOR_ID" SUICurrentPrinter -string "$QUEUE" 2>/dev/null || true
     /bin/rm -rf "$USER_HOME/Library/Saved Application State/$STATUS_MONITOR_ID.savedState"
     echo "Reset StatusMonitor persistent UI state for $CURRENT_USER."
   fi
@@ -51,7 +69,7 @@ fi
 
 echo "Using USB URI: $USB_URI"
 
-/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$PPD" -D "Canon LBP2900 Open CAPT"
+/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$PPD" -D "Canon LBP2900 CAPT"
 /usr/bin/lpoptions -p "$QUEUE" -o PageSize=A4 >/dev/null 2>&1 || true
 /usr/bin/lpoptions -d "$QUEUE" >/dev/null 2>&1 || true
 /usr/sbin/cupsenable "$QUEUE" 2>/dev/null || true

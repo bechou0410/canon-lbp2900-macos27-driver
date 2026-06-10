@@ -3,15 +3,15 @@
 *%%%% Created by the CUPS PPD Compiler CUPS v2.3.4.
 *% (C)2020 Moses Chong
 *FormatVersion: "4.3"
-*FileVersion: "0.1.4"
+*FileVersion: "10.0.2-open-capt"
 *LanguageVersion: English
 *LanguageEncoding: ISOLatin1
-*PCFileName: "CNLB2K9.ppd"
-*Product: "(LBP2900 Open CAPT)"
+*PCFileName: "CNL290AK.PPD"
+*Product: "(lbp2900 a)"
 *Manufacturer: "Canon"
-*ModelName: "Canon LBP2900 Open CAPT"
-*ShortNickName: "Canon LBP2900 Open CAPT"
-*NickName: "Canon LBP2900 Open CAPT, 0.1.4"
+*ModelName: "Canon LBP2900 CAPT"
+*ShortNickName: "LBP2900"
+*NickName: "Canon LBP2900 CAPT"
 *PSVersion: "(3010.000) 0"
 *LanguageLevel: "3"
 *ColorDevice: False
@@ -21,7 +21,7 @@
 *LandscapeOrientation: Plus90
 *TTRasterizer: Type42
 *cupsVersion: 2.3
-*cupsModelNumber: 0
+*cupsModelNumber: 36
 *cupsManualCopies: False
 *cupsFilter: "application/vnd.cups-raster 1 rastertocapt"
 *cupsLanguages: "en"
@@ -30,7 +30,27 @@
 *ccpdReady: "True"
 *APPrinterUtilityPath: "/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
 *APPrinterIconPath: "/Library/Printers/Canon/CUPSCAPT2/Icons/CAPT.icns"
+*%CNPrintLang: CAPT
+*CNTblModel: "1"
+*CNHTPattern1: "444"
+*CNHTPattern2: "222"
+*CNMaxCopies: "999"
+*CNMaxGutter: "30"
+*CNDriverRootPath: "/Library/Printers/Canon/CUPSCAPT2"
+*CNPrtColorSpace: "K"
+*CNPDLType: "CAPT"
+*CNColorMode: "mono"
+*CNBidiModeUSB: "Both_Di"
 *CNPrinterName: "Canon LBP2900"
+*CNOEFLibName: "captfilter2"
+*CNOptDevType: "1"
+*CNOptCalibType: "0"
+*%CNSUIOptionMenu: "2"
+*%CNSUIUtilMenu: "64"
+*%CNSUIJobMenu: "7"
+*%CNSUMMARYFlag: "1"
+*%CNUIValue: *CNUIModelName(LBP2900):False
+*%CNUIValue: *CNTargetCountry(EU):False
 *OpenUI *PageSize/Media Size: PickOne
 *OrderDependency: 10 AnySetup *PageSize
 *DefaultPageSize: A4

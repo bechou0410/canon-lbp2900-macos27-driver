@@ -38,11 +38,11 @@ install -m 0755 "$SCRIPTS/postinstall" "$PAYLOAD_SCRIPTS/postinstall"
 /usr/bin/find "$PAYLOAD_ROOT" "$PAYLOAD_SCRIPTS" -name '._*' -delete 2>/dev/null || true
 /usr/bin/xattr -cr "$PAYLOAD_ROOT" "$PAYLOAD_SCRIPTS" 2>/dev/null || true
 
-COPYFILE_DISABLE=1 /usr/bin/pkgbuild \
+/usr/bin/env COPYFILE_DISABLE=1 COPY_EXTENDED_ATTRIBUTES_DISABLE=1 /usr/bin/pkgbuild \
   --root "$PAYLOAD_ROOT" \
   --scripts "$PAYLOAD_SCRIPTS" \
   --identifier "local.lbp2900.macos27.lbp3000-patcher" \
-  --version "27.2.7" \
+  --version "27.2.8" \
   --install-location "/" \
   "$PKG"
 

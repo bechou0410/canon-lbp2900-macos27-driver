@@ -16,6 +16,8 @@ BASE_RESOURCE_PPD_GZ="/Library/Printers/PPDs/Contents/Resources/CNMC2LBP3000AUK.
 STATUS_MONITOR="/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
 STATUS_MONITOR_ID="jp.co.canon.CUPSCAPT2.StatusMonitor"
 CAPT_ROOT="/Library/Printers/Canon/CUPSCAPT2"
+BACKGROUND_AGENT="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist"
+BACKGROUND_PROCESS="Canon CAPT BackGrounder"
 
 /usr/bin/find /usr/libexec/cups -name '._*' -delete 2>/dev/null || true
 /usr/bin/find /Library/Printers -name '._*' -delete 2>/dev/null || true
@@ -71,6 +73,7 @@ ensure_ppd_line "CNBidiModeUSB" '*CNBidiModeUSB: "Both_Di"'
 /bin/mv "$TMP_PPD" "$CLONED_PPD"
 /usr/sbin/chown root:wheel "$CLONED_PPD"
 /bin/chmod 0644 "$CLONED_PPD"
+echo "Saved LBP3000-derived reference PPD: $CLONED_PPD"
 
 if [ -d "$STATUS_MONITOR" ]; then
   echo "Detected Canon CAPT StatusMonitor from the original driver."
@@ -97,6 +100,10 @@ fi
 CURRENT_USER="$(/usr/bin/stat -f %Su /dev/console 2>/dev/null || true)"
 CURRENT_UID="$(/usr/bin/stat -f %u /dev/console 2>/dev/null || echo 0)"
 if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" != "0" ]; then
+  if [ -f "$BACKGROUND_AGENT" ]; then
+    /bin/launchctl bootout "gui/$CURRENT_UID" "$BACKGROUND_AGENT" 2>/dev/null || true
+    echo "Unloaded Canon CAPT BackGrounder for $CURRENT_USER to keep the patched queue on usb://."
+  fi
   USER_HOME="$(/usr/bin/dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | /usr/bin/awk '{print $2}')"
   if [ -n "$USER_HOME" ]; then
     /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowHeight 2>/dev/null || true
@@ -109,10 +116,25 @@ if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" !
     echo "Reset StatusMonitor persistent UI state for $CURRENT_USER."
   fi
 fi
+/usr/bin/pkill -f "$BACKGROUND_PROCESS" 2>/dev/null || true
 
-USB_URI="$(/usr/bin/lpstat -v "$BASE_QUEUE" 2>/dev/null | /usr/bin/awk -F': ' 'NR == 1 {print $2; exit}')"
-if [ -n "$USB_URI" ]; then
-  echo "Cloning USB URI from $BASE_QUEUE: $USB_URI"
+BASE_URI="$(/usr/bin/lpstat -v "$BASE_QUEUE" 2>/dev/null | /usr/bin/awk -F': ' 'NR == 1 {print $2; exit}')"
+USB_URI=""
+if [ -n "$BASE_URI" ]; then
+  echo "Detected device URI from $BASE_QUEUE: $BASE_URI"
+  case "$BASE_URI" in
+    usb://*)
+      USB_URI="$BASE_URI"
+      ;;
+    cnbma2://*/usbSP/*)
+      USB_PATH="${BASE_URI#*/usbSP/}"
+      USB_URI="usb://$USB_PATH"
+      echo "Converted Canon cnbma2 URI to CUPS USB URI: $USB_URI"
+      ;;
+    *)
+      echo "Not reusing non-USB Canon backend URI for rastertocapt: $BASE_URI"
+      ;;
+  esac
 fi
 if [ -z "$USB_URI" ]; then
   USB_URI="$(/usr/sbin/lpinfo -v 2>/dev/null | /usr/bin/awk 'index($2, "usb://Canon/LBP2900") == 1 {print $2; exit}')"
@@ -126,7 +148,8 @@ fi
 
 echo "Using USB URI: $USB_URI"
 
-/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$CLONED_PPD" -D "Canon LBP2900 CAPT"
+echo "Creating $QUEUE with the open CAPT raster PPD. The cloned LBP3000 PPD is kept only as a reference because it blocks the rastertocapt print path on macOS 27."
+/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$FALLBACK_PPD" -D "Canon LBP2900 CAPT"
 /usr/bin/lpoptions -p "$QUEUE" -o PageSize=A4 >/dev/null 2>&1 || true
 /usr/bin/lpoptions -d "$QUEUE" >/dev/null 2>&1 || true
 /usr/sbin/cupsenable "$QUEUE" 2>/dev/null || true

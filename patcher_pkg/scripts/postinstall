@@ -7,8 +7,12 @@ exec >>"$LOG" 2>&1
 echo "==== $(date) Canon LBP2900 LBP3000 patcher postinstall ===="
 
 FILTER="/usr/libexec/cups/filter/rastertocapt"
-PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.ppd"
+FALLBACK_PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.ppd"
+CLONED_PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-from-LBP3000.ppd"
 QUEUE="Canon_LBP2900"
+BASE_QUEUE="Canon_LBP3000"
+BASE_QUEUE_PPD="/etc/cups/ppd/Canon_LBP3000.ppd"
+BASE_RESOURCE_PPD_GZ="/Library/Printers/PPDs/Contents/Resources/CNMC2LBP3000AUK.ppd.gz"
 STATUS_MONITOR="/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
 STATUS_MONITOR_ID="jp.co.canon.CUPSCAPT2.StatusMonitor"
 CAPT_ROOT="/Library/Printers/Canon/CUPSCAPT2"
@@ -18,8 +22,55 @@ CAPT_ROOT="/Library/Printers/Canon/CUPSCAPT2"
 
 /usr/sbin/chown root:wheel "$FILTER"
 /bin/chmod 0555 "$FILTER"
-/usr/sbin/chown root:wheel "$PPD"
-/bin/chmod 0644 "$PPD"
+/usr/sbin/chown root:wheel "$FALLBACK_PPD"
+/bin/chmod 0644 "$FALLBACK_PPD"
+
+TMP_PPD="$(/usr/bin/mktemp -t CanonLBP2900-from-LBP3000.XXXXXX)"
+if [ -f "$BASE_QUEUE_PPD" ]; then
+  echo "Cloning PPD from existing queue: $BASE_QUEUE_PPD"
+  /bin/cp "$BASE_QUEUE_PPD" "$TMP_PPD"
+elif [ -f "$BASE_RESOURCE_PPD_GZ" ]; then
+  echo "Cloning PPD from Canon LBP3000 driver resource: $BASE_RESOURCE_PPD_GZ"
+  /usr/bin/gunzip -c "$BASE_RESOURCE_PPD_GZ" >"$TMP_PPD"
+else
+  echo "Error: Canon LBP3000 PPD was not found. Install Canon's original LBP3000/CAPT driver first, then run this patcher."
+  /bin/rm -f "$TMP_PPD"
+  exit 1
+fi
+
+/usr/bin/perl -0pi -e '
+  s/^\*PCFileName:.*$/\*PCFileName: "CNL290AK.PPD"/mg;
+  s/^\*Product:.*$/\*Product: "\(lbp2900 a\)"/mg;
+  s/^\*ModelName:.*$/\*ModelName: "Canon LBP2900 CAPT"/mg;
+  s/^\*ShortNickName:.*$/\*ShortNickName: "LBP2900"/mg;
+  s/^\*NickName:.*$/\*NickName: "Canon LBP2900 CAPT \(cloned from LBP3000\)"/mg;
+  s{^\*cupsFilter:.*$}{\*cupsFilter: "application/vnd.cups-raster 1 rastertocapt"}mg;
+  s/^\*CNPrinterName:.*$/\*CNPrinterName: "Canon LBP2900"/mg;
+  s/^\*%CNUIValue: \*CNUIModelName\(LBP3000\):False$/\*%CNUIValue: \*CNUIModelName\(LBP2900\):False/mg;
+' "$TMP_PPD"
+
+ensure_ppd_line() {
+  key="$1"
+  line="$2"
+  if ! /usr/bin/grep -q "^\*$key:" "$TMP_PPD"; then
+    /bin/echo "$line" >>"$TMP_PPD"
+  fi
+}
+
+ensure_ppd_line "opbidiPlugin" '*opbidiPlugin: "captmoncnab3"'
+ensure_ppd_line "opbidiReadInterval" '*opbidiReadInterval: "2"'
+ensure_ppd_line "ccpdReady" '*ccpdReady: "True"'
+ensure_ppd_line "APPrinterUtilityPath" '*APPrinterUtilityPath: "/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"'
+ensure_ppd_line "APPrinterIconPath" '*APPrinterIconPath: "/Library/Printers/Canon/CUPSCAPT2/Icons/CAPT.icns"'
+ensure_ppd_line "CNPrinterName" '*CNPrinterName: "Canon LBP2900"'
+ensure_ppd_line "CNDriverRootPath" '*CNDriverRootPath: "/Library/Printers/Canon/CUPSCAPT2"'
+ensure_ppd_line "CNPDLType" '*CNPDLType: "CAPT"'
+ensure_ppd_line "CNColorMode" '*CNColorMode: "mono"'
+ensure_ppd_line "CNBidiModeUSB" '*CNBidiModeUSB: "Both_Di"'
+
+/bin/mv "$TMP_PPD" "$CLONED_PPD"
+/usr/sbin/chown root:wheel "$CLONED_PPD"
+/bin/chmod 0644 "$CLONED_PPD"
 
 if [ -d "$STATUS_MONITOR" ]; then
   echo "Detected Canon CAPT StatusMonitor from the original driver."
@@ -59,7 +110,13 @@ if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" !
   fi
 fi
 
-USB_URI="$(/usr/sbin/lpinfo -v 2>/dev/null | /usr/bin/awk 'index($2, "usb://Canon/LBP2900") == 1 {print $2; exit}')"
+USB_URI="$(/usr/bin/lpstat -v "$BASE_QUEUE" 2>/dev/null | /usr/bin/awk -F': ' 'NR == 1 {print $2; exit}')"
+if [ -n "$USB_URI" ]; then
+  echo "Cloning USB URI from $BASE_QUEUE: $USB_URI"
+fi
+if [ -z "$USB_URI" ]; then
+  USB_URI="$(/usr/sbin/lpinfo -v 2>/dev/null | /usr/bin/awk 'index($2, "usb://Canon/LBP2900") == 1 {print $2; exit}')"
+fi
 if [ -z "$USB_URI" ]; then
   USB_URI="$(/usr/sbin/lpinfo -v 2>/dev/null | /usr/bin/awk 'index($2, "usb://Canon/") == 1 && index($2, "LBP") > 0 {print $2; exit}')"
 fi
@@ -69,7 +126,7 @@ fi
 
 echo "Using USB URI: $USB_URI"
 
-/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$PPD" -D "Canon LBP2900 CAPT"
+/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$CLONED_PPD" -D "Canon LBP2900 CAPT"
 /usr/bin/lpoptions -p "$QUEUE" -o PageSize=A4 >/dev/null 2>&1 || true
 /usr/bin/lpoptions -d "$QUEUE" >/dev/null 2>&1 || true
 /usr/sbin/cupsenable "$QUEUE" 2>/dev/null || true
@@ -78,7 +135,7 @@ echo "Using USB URI: $USB_URI"
 echo "Installed patched queue:"
 /usr/bin/lpstat -v "$QUEUE" 2>/dev/null || true
 /usr/bin/lpstat -p "$QUEUE" -l 2>/dev/null || true
-/bin/ls -l "$FILTER" "$PPD" 2>/dev/null || true
+/bin/ls -l "$FILTER" "$CLONED_PPD" "$FALLBACK_PPD" 2>/dev/null || true
 echo "==== done ===="
 
 exit 0

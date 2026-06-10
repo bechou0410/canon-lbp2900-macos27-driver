@@ -5,3 +5,4 @@ build/
 tmp/
 *.xattr
 dist/Canon-CAPT-runtime-restore-local.pkg
+dist/Canon-CAPT-clean-uninstall-local.pkg

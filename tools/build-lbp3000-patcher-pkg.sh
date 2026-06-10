@@ -42,7 +42,7 @@ COPYFILE_DISABLE=1 /usr/bin/pkgbuild \
   --root "$PAYLOAD_ROOT" \
   --scripts "$PAYLOAD_SCRIPTS" \
   --identifier "local.lbp2900.macos27.lbp3000-patcher" \
-  --version "27.2.6" \
+  --version "27.2.7" \
   --install-location "/" \
   "$PKG"
 

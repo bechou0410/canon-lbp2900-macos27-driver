@@ -6,7 +6,7 @@ exec >>"$LOG" 2>&1
 
 echo "==== $(date) Canon LBP2900 LBP3000 patcher preinstall ===="
 
-for queue in Canon_LBP2900 Canon_LBP2900_Open Canon_LBP2900_2 Canon_LBP3000_Status Canon_LBP3000; do
+for queue in Canon_LBP2900 Canon_LBP2900_Open Canon_LBP2900_2 Canon_LBP3000_Status; do
   /usr/bin/cancel -a "$queue" 2>/dev/null || true
   /usr/sbin/lpadmin -x "$queue" 2>/dev/null || true
 done
@@ -16,8 +16,7 @@ done
 /bin/rm -f /etc/cups/ppd/Canon_LBP2900.ppd \
   /etc/cups/ppd/Canon_LBP2900_Open.ppd \
   /etc/cups/ppd/Canon_LBP2900_2.ppd \
-  /etc/cups/ppd/Canon_LBP3000_Status.ppd \
-  /etc/cups/ppd/Canon_LBP3000.ppd
+  /etc/cups/ppd/Canon_LBP3000_Status.ppd
 
 echo "Patcher preinstall done"
 exit 0

@@ -20,20 +20,23 @@ CanonLBP2900-macOS27-lbp3000-patcher.pkg
 
 1. Install Canon's original LBP3000/CAPT driver first.
 2. Connect the Canon LBP2900 by USB and turn it on.
-3. Open `CanonLBP2900-macOS27-lbp3000-patcher.pkg`.
-4. Complete the macOS Installer steps.
-5. Open System Settings > Printers & Scanners and confirm `Canon_LBP2900` exists.
-6. Print a test page.
+3. Add the printer once as Canon LBP3000/CAPT if macOS does not create a `Canon_LBP3000` queue automatically.
+4. Open `CanonLBP2900-macOS27-lbp3000-patcher.pkg`.
+5. Complete the macOS Installer steps.
+6. Open System Settings > Printers & Scanners and confirm both the original `Canon_LBP3000` queue and the cloned `Canon_LBP2900` queue exist.
+7. Print from `Canon_LBP2900`.
 
 If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then confirm.
 
 ## What The Patcher Does
 
-- Keeps Canon's original LBP3000/CAPT driver files in place.
+- Keeps Canon's original LBP3000/CAPT driver files and queue in place.
 - Installs the open `rastertocapt` CUPS filter.
-- Installs `CanonLBP2900-open-capt.ppd`, with Canon CAPT metadata so Canon CAPT StatusMonitor can detect the `Canon_LBP2900` queue.
-- Removes old conflicting queues named `Canon_LBP2900`, `Canon_LBP2900_Open`, `Canon_LBP2900_2`, `Canon_LBP3000_Status`, and `Canon_LBP3000`.
-- Creates and enables a fresh `Canon_LBP2900` USB queue.
+- Installs `CanonLBP2900-open-capt.ppd` as a fallback template.
+- Clones the existing `Canon_LBP3000` PPD when present, or Canon's installed `CNMC2LBP3000AUK.ppd.gz` resource otherwise.
+- Rewrites the cloned PPD identity to `Canon LBP2900 CAPT` and switches only the CUPS filter path to `rastertocapt`.
+- Removes old conflicting LBP2900 patch queues, but does not remove `Canon_LBP3000`.
+- Creates and enables a fresh cloned `Canon_LBP2900` USB queue.
 - Sets A4 as the default paper size.
 
 ## Balanced Speed Mode

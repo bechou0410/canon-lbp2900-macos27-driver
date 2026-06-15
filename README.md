@@ -38,11 +38,11 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Removes old conflicting LBP2900 patch queues, but does not remove `Canon_LBP3000`.
 - Creates and enables a fresh `Canon_LBP2900` USB queue.
 - Sets A4 as the default paper size.
-- Unloads Canon CAPT BackGrounder for the current login session so it cannot rewrite the patched queue from `usb://...` to `cnbma2://...`.
+- Disables Canon CAPT BackGrounder by backing up its LaunchAgent to `jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher`, so it cannot restart after reboot and rewrite the patched queue from `usb://...` to `cnbma2://...`.
 
 ## Balanced Speed Mode
 
-The bundled `rastertocapt` filter is tuned for a balance between speed and stability on macOS 27. It still waits for printer status at safe page boundaries, but it drains the USB backend less aggressively while streaming print data. It also limits the final page-out and page-completed status polling to a short grace period, so CUPS can finish the job sooner after the printer has already received and printed the page.
+The bundled `rastertocapt` filter is tuned for a balance between speed and stability on macOS 27. It still waits for printer status at safe page boundaries, but it writes larger USB chunks, drains the USB backend less often while streaming print data, polls ready status every 250 ms instead of every 1 second, and limits the final page-out/page-completed grace period so CUPS can finish sooner after the printer has already received and printed the page.
 
 ## Verify
 
@@ -63,7 +63,7 @@ cupsaccept Canon_LBP2900
 lpstat -t
 ```
 
-If `lpstat -t` shows `Canon_LBP2900` using a `cnbma2://.../usbSP/...` device URI, rerun the patcher. The working LBP2900 queue should use a direct `usb://Canon/LBP2900...` URI.
+If `lpstat -t` shows `Canon_LBP2900` using a `cnbma2://.../usbSP/...` device URI, rerun the patcher. The working LBP2900 queue should use a direct `usb://Canon/LBP2900...` URI. On v27.2.9 and newer, the patcher also disables Canon CAPT BackGrounder persistently so this should not come back after reboot.
 
 If CUPS says the job completed but no paper comes out, power-cycle the printer, unplug USB for 10 seconds, reconnect USB, then print again.
 

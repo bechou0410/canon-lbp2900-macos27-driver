@@ -8,11 +8,18 @@ echo "==== $(date) Canon LBP2900 LBP3000 patcher preinstall ===="
 
 CURRENT_UID="$(/usr/bin/stat -f %u /dev/console 2>/dev/null || echo 0)"
 BACKGROUND_AGENT="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist"
+BACKGROUND_AGENT_DISABLED="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher"
+BACKGROUND_LABEL="jp.co.canon.CUPSCAPT2.BackGrounder"
 
 if [ "$CURRENT_UID" != "0" ] && [ -f "$BACKGROUND_AGENT" ]; then
+  /bin/launchctl disable "gui/$CURRENT_UID/$BACKGROUND_LABEL" 2>/dev/null || true
   /bin/launchctl bootout "gui/$CURRENT_UID" "$BACKGROUND_AGENT" 2>/dev/null || true
 fi
 /usr/bin/pkill -f "Canon CAPT BackGrounder" 2>/dev/null || true
+if [ -f "$BACKGROUND_AGENT" ]; then
+  /bin/mv "$BACKGROUND_AGENT" "$BACKGROUND_AGENT_DISABLED" 2>/dev/null || true
+  echo "Disabled Canon CAPT BackGrounder LaunchAgent so it cannot restart after reboot."
+fi
 
 for queue in Canon_LBP2900 Canon_LBP2900_Open Canon_LBP2900_2 Canon_LBP3000_Status; do
   /usr/bin/cancel -a "$queue" 2>/dev/null || true

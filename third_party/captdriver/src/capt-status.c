@@ -29,6 +29,10 @@
 
 static struct capt_status_s status;
 
+enum {
+	CAPT_READY_POLL_USEC = 250000,
+};
+
 static inline char bit(enum capt_flags flag)
 {
 	return FLAG(&status, flag) ? '1' : '0';
@@ -122,17 +126,17 @@ const struct capt_status_s *capt_get_xstatus(void)
 void capt_wait_ready(void)
 {
 	while (FLAG(capt_get_status(), CAPT_FL_BUSY))
-		sleep(1);
+		usleep(CAPT_READY_POLL_USEC);
 }
 
 void capt_wait_xready(void)
 {
 	while (FLAG(capt_get_xstatus(), CAPT_FL_BUSY))
-		sleep(1);
+		usleep(CAPT_READY_POLL_USEC);
 }
 
 void capt_wait_xready_only(void)
 {
        while (FLAG(capt_get_xstatus_only(), CAPT_FL_BUSY))
-               sleep(1);
+               usleep(CAPT_READY_POLL_USEC);
 }

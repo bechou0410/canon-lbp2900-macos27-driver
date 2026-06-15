@@ -42,7 +42,7 @@ install -m 0755 "$SCRIPTS/postinstall" "$PAYLOAD_SCRIPTS/postinstall"
   --root "$PAYLOAD_ROOT" \
   --scripts "$PAYLOAD_SCRIPTS" \
   --identifier "local.lbp2900.macos27.lbp3000-patcher" \
-  --version "27.2.8" \
+  --version "27.2.9" \
   --install-location "/" \
   "$PKG"
 

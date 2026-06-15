@@ -17,6 +17,8 @@ STATUS_MONITOR="/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.ap
 STATUS_MONITOR_ID="jp.co.canon.CUPSCAPT2.StatusMonitor"
 CAPT_ROOT="/Library/Printers/Canon/CUPSCAPT2"
 BACKGROUND_AGENT="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist"
+BACKGROUND_AGENT_DISABLED="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher"
+BACKGROUND_LABEL="jp.co.canon.CUPSCAPT2.BackGrounder"
 BACKGROUND_PROCESS="Canon CAPT BackGrounder"
 
 /usr/bin/find /usr/libexec/cups -name '._*' -delete 2>/dev/null || true
@@ -101,8 +103,12 @@ CURRENT_USER="$(/usr/bin/stat -f %Su /dev/console 2>/dev/null || true)"
 CURRENT_UID="$(/usr/bin/stat -f %u /dev/console 2>/dev/null || echo 0)"
 if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" != "0" ]; then
   if [ -f "$BACKGROUND_AGENT" ]; then
+    /bin/launchctl disable "gui/$CURRENT_UID/$BACKGROUND_LABEL" 2>/dev/null || true
     /bin/launchctl bootout "gui/$CURRENT_UID" "$BACKGROUND_AGENT" 2>/dev/null || true
-    echo "Unloaded Canon CAPT BackGrounder for $CURRENT_USER to keep the patched queue on usb://."
+    /bin/mv "$BACKGROUND_AGENT" "$BACKGROUND_AGENT_DISABLED" 2>/dev/null || true
+    echo "Disabled Canon CAPT BackGrounder for $CURRENT_USER to keep the patched queue on usb:// after reboot."
+  elif [ -f "$BACKGROUND_AGENT_DISABLED" ]; then
+    echo "Canon CAPT BackGrounder LaunchAgent is already disabled by the LBP2900 patcher."
   fi
   USER_HOME="$(/usr/bin/dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | /usr/bin/awk '{print $2}')"
   if [ -n "$USER_HOME" ]; then

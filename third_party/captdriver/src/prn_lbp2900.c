@@ -38,7 +38,7 @@ uint16_t job;
 
 enum {
 	LBP2900_STATUS_POLL_USEC = 250000,
-	LBP2900_FINAL_STATUS_POLL_TICKS = 4,
+	LBP2900_FINAL_STATUS_POLL_TICKS = 8,
 };
 
 struct printer_gpio_s {

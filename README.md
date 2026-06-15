@@ -43,7 +43,7 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 
 ## Balanced Speed Mode
 
-The bundled `rastertocapt` filter is tuned for a balance between speed and stability on macOS 27. It still waits for printer status at safe page boundaries, but it writes larger USB chunks, drains the USB backend less often while streaming print data, polls ready status every 250 ms instead of every 1 second, and limits the final page-out/page-completed grace period so CUPS can finish sooner after the printer has already received and printed the page.
+The bundled `rastertocapt` filter is tuned for a balance between speed and stability on macOS 27. It still waits for printer status at safe page boundaries, writes larger USB chunks, drains the USB backend less often while streaming print data, polls ready status every 250 ms instead of every 1 second, and keeps a short final page-out/page-completed grace period so multi-page jobs can hand off reliably without leaving CUPS waiting longer than needed.
 
 ## Verify
 

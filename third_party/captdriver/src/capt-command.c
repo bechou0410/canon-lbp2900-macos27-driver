@@ -33,7 +33,7 @@ static size_t  capt_iosize;
 
 enum {
 	CAPT_SEND_CHUNK = 16384,
-	CAPT_DRAIN_INTERVAL = 65536,
+	CAPT_DRAIN_INTERVAL = 32768,
 };
 
 static void capt_drain_output(void)

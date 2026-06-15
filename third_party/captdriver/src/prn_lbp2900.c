@@ -37,8 +37,8 @@
 uint16_t job;
 
 enum {
-	LBP2900_STATUS_POLL_USEC = 250000,
-	LBP2900_FINAL_STATUS_POLL_TICKS = 8,
+	LBP2900_PAGE_OUT_WAIT_SECONDS = 15,
+	LBP2900_JOB_END_WAIT_SECONDS = 20,
 };
 
 struct printer_gpio_s {
@@ -101,11 +101,6 @@ static void lbp2900_wait_ready(const struct printer_ops_s *ops)
 {
 	const struct lbp2900_ops_s *lops = container_of(ops, struct lbp2900_ops_s, ops);
 	lops->wait_ready();
-}
-
-static void lbp2900_status_poll_sleep(void)
-{
-	usleep(LBP2900_STATUS_POLL_USEC);
 }
 
 static void send_job_start(uint8_t fg, uint16_t page)
@@ -346,10 +341,10 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 
 	/* waiting until the page is received */
 	while (1) {
+	  sleep(1);
 	  status = lbp2900_get_status(state->ops);
 	  if (status->page_received == status->page_decoding)
 	    break;
-	  lbp2900_status_poll_sleep();
 	}
 	send_job_start(2, status->page_decoding);
 	lbp2900_wait_ready(state->ops);
@@ -360,26 +355,24 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 
 	send_job_start(6, status->page_decoding);
 
-	for (unsigned int i = 0; i <= LBP2900_FINAL_STATUS_POLL_TICKS; i++) {
+	for (unsigned int i = 0; i <= LBP2900_PAGE_OUT_WAIT_SECONDS; i++) {
 		status = lbp2900_get_status(state->ops);
 		/* Interesting. Using page_printing here results in shifted print */
 		if (status->page_out == status->page_decoding)
 			return true;
 		if (FLAG(status, CAPT_FL_NOPAPER2) || FLAG(status, CAPT_FL_NOPAPER1)) {
 			fprintf(stderr, "DEBUG: CAPT: no paper\n");
-			if (FLAG(status, CAPT_FL_PRINTING) || FLAG(status, CAPT_FL_PROCESSING1)) {
-				lbp2900_status_poll_sleep();
+			if (FLAG(status, CAPT_FL_PRINTING) || FLAG(status, CAPT_FL_PROCESSING1))
 				continue;
-			}
 			return false;
 		}
-		if (i < LBP2900_FINAL_STATUS_POLL_TICKS)
-			lbp2900_status_poll_sleep();
+		if (i < LBP2900_PAGE_OUT_WAIT_SECONDS)
+			sleep(1);
 	}
 
 	fprintf(stderr,
-			"DEBUG: CAPT: page-out status did not settle within %u ms; finishing job handoff\n",
-			(LBP2900_FINAL_STATUS_POLL_TICKS * LBP2900_STATUS_POLL_USEC) / 1000);
+			"DEBUG: CAPT: page-out status did not settle within %u seconds; continuing after safe handoff delay\n",
+			LBP2900_PAGE_OUT_WAIT_SECONDS);
 	return true;
 }
 
@@ -388,20 +381,20 @@ static void lbp2900_job_epilogue(struct printer_state_s *state)
 	uint8_t jbuf[2] = { LO(job), HI(job) };
 	const struct capt_status_s *status = NULL;
 
-	for (unsigned int i = 0; i <= LBP2900_FINAL_STATUS_POLL_TICKS; i++) {
+	for (unsigned int i = 0; i <= LBP2900_JOB_END_WAIT_SECONDS; i++) {
 		status = lbp2900_get_status(state->ops);
 		if (status->page_completed == status->page_decoding) {
 			send_job_start(4, status->page_completed);
 			capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
 			return;
 		}
-		if (i < LBP2900_FINAL_STATUS_POLL_TICKS)
-			lbp2900_status_poll_sleep();
+		if (i < LBP2900_JOB_END_WAIT_SECONDS)
+			sleep(1);
 	}
 
 	fprintf(stderr,
-			"DEBUG: CAPT: page-completed status did not settle within %u ms; ending job with decoded page counter\n",
-			(LBP2900_FINAL_STATUS_POLL_TICKS * LBP2900_STATUS_POLL_USEC) / 1000);
+			"DEBUG: CAPT: page-completed status did not settle within %u seconds; ending job after safe completion delay\n",
+			LBP2900_JOB_END_WAIT_SECONDS);
 	send_job_start(4, status->page_decoding);
 	capt_sendrecv(CAPT_JOB_END, jbuf, 2, NULL, 0);
 }

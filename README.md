@@ -43,7 +43,7 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 
 ## Balanced Speed Mode
 
-The bundled `rastertocapt` filter is tuned for a balance between speed and stability on macOS 27. It still waits for printer status at safe page boundaries, writes larger USB chunks, drains the USB backend less often while streaming print data, polls ready status every 250 ms instead of every 1 second, and keeps a short final page-out/page-completed grace period so multi-page jobs can hand off reliably without leaving CUPS waiting longer than needed.
+The bundled `rastertocapt` filter is tuned for multi-page stability on macOS 27. It waits for the printer to confirm page-out and page-completed status, with conservative safe handoff delays before moving to the next page or ending the job. This can keep CUPS in the sending state longer, but it avoids dropping later pages on real Canon LBP2900 hardware.
 
 ## Verify
 

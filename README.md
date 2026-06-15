@@ -37,6 +37,7 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Uses Canon's LBP3000/CAPT install as the runtime and StatusMonitor source, but keeps the LBP2900 queue on the open `rastertocapt` print path.
 - Removes old conflicting LBP2900 patch queues, but does not remove `Canon_LBP3000`.
 - Creates and enables a fresh `Canon_LBP2900` USB queue.
+- Shows the printer as `Canon LBP2900` without adding `CAPT` to the visible model/description.
 - Sets A4 as the default paper size.
 - Disables Canon CAPT BackGrounder by backing up its LaunchAgent to `jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher`, so it cannot restart after reboot and rewrite the patched queue from `usb://...` to `cnbma2://...`.
 

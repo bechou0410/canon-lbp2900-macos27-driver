@@ -45,9 +45,9 @@ fi
 /usr/bin/perl -0pi -e '
   s/^\*PCFileName:.*$/\*PCFileName: "CNL290AK.PPD"/mg;
   s/^\*Product:.*$/\*Product: "\(lbp2900 a\)"/mg;
-  s/^\*ModelName:.*$/\*ModelName: "Canon LBP2900 CAPT"/mg;
+  s/^\*ModelName:.*$/\*ModelName: "Canon LBP2900"/mg;
   s/^\*ShortNickName:.*$/\*ShortNickName: "LBP2900"/mg;
-  s/^\*NickName:.*$/\*NickName: "Canon LBP2900 CAPT \(cloned from LBP3000\)"/mg;
+  s/^\*NickName:.*$/\*NickName: "Canon LBP2900 \(cloned from LBP3000\)"/mg;
   s{^\*cupsFilter:.*$}{\*cupsFilter: "application/vnd.cups-raster 1 rastertocapt"}mg;
   s/^\*CNPrinterName:.*$/\*CNPrinterName: "Canon LBP2900"/mg;
   s/^\*%CNUIValue: \*CNUIModelName\(LBP3000\):False$/\*%CNUIValue: \*CNUIModelName\(LBP2900\):False/mg;
@@ -155,7 +155,7 @@ fi
 echo "Using USB URI: $USB_URI"
 
 echo "Creating $QUEUE with the open CAPT raster PPD. The cloned LBP3000 PPD is kept only as a reference because it blocks the rastertocapt print path on macOS 27."
-/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$FALLBACK_PPD" -D "Canon LBP2900 CAPT"
+/usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$FALLBACK_PPD" -D "Canon LBP2900"
 /usr/bin/lpoptions -p "$QUEUE" -o PageSize=A4 >/dev/null 2>&1 || true
 /usr/bin/lpoptions -d "$QUEUE" >/dev/null 2>&1 || true
 /usr/sbin/cupsenable "$QUEUE" 2>/dev/null || true

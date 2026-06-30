@@ -25,7 +25,10 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <cups/raster.h>
 
@@ -46,6 +49,8 @@ const struct printer_ops_s *ops;
 struct printer_state_s *state = NULL;
 struct cached_page_s *cached_page = NULL;
 cups_raster_t *raster;
+const char *cups_job_id = NULL;
+const char *cups_printer_name = NULL;
 
 /* compressor state */
 uint8_t *linebuf = NULL;
@@ -230,6 +235,38 @@ static void do_cancel(int s)
 	exit(1);
 }
 
+static void hold_current_job(void)
+{
+	char job[256];
+	int status;
+	pid_t pid;
+
+	if (! cups_job_id || ! cups_printer_name ||
+			! cups_job_id[0] || ! cups_printer_name[0]) {
+		fprintf(stderr, "ERROR: CAPT: cannot hold current CUPS job; missing PRINTER or job-id\n");
+		return;
+	}
+
+	snprintf(job, sizeof(job), "%s-%s", cups_printer_name, cups_job_id);
+	pid = fork();
+	if (pid == 0) {
+		execl("/usr/bin/lp", "lp", "-i", job, "-H", "hold", (char *) NULL);
+		_exit(127);
+	}
+	if (pid < 0) {
+		fprintf(stderr, "ERROR: CAPT: cannot fork to hold CUPS job %s: %s\n", job, strerror(errno));
+		return;
+	}
+	if (waitpid(pid, &status, 0) < 0) {
+		fprintf(stderr, "ERROR: CAPT: cannot wait while holding CUPS job %s: %s\n", job, strerror(errno));
+		return;
+	}
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		fprintf(stderr, "DEBUG: CAPT: held CUPS job %s for user resume\n", job);
+	else
+		fprintf(stderr, "ERROR: CAPT: failed to hold CUPS job %s\n", job);
+}
+
 static bool do_print(int fd)
 {
 	bool in_job = false;
@@ -305,7 +342,8 @@ static bool do_print(int fd)
 		if (ops->page_epilogue) {
 			bool ok = ops->page_epilogue(state, &cached_page->dims);
 			if (! ok) {
-				fprintf(stderr, "ERROR: CAPT: page %u was not printed; stopping job so CUPS keeps the failed session visible\n", state->ipage);
+				fprintf(stderr, "ERROR: CAPT: page %u was not printed; holding job so the user can resume it in Print Center\n", state->ipage);
+				hold_current_job();
 				print_failed = true;
 				break;
 			}
@@ -377,6 +415,8 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Usage: %s job-id user title copies options [file]\n", argv[0]);
 		return 1;
 	}
+	cups_job_id = argv[1];
+	cups_printer_name = getenv("PRINTER");
 
 	if (argc == 7) {
 		fd = open(argv[6], O_RDONLY);

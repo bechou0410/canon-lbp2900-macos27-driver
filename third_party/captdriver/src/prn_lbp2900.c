@@ -373,48 +373,16 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 
 	send_job_start(6, status->page_decoding);
 
-	bool reported_no_paper = false;
-	bool retry_button_pressed = false;
 	for (unsigned int i = 0; i <= LBP2900_PAGE_OUT_WAIT_SECONDS; i++) {
 		status = lbp2900_get_status(state->ops);
 		/* Interesting. Using page_printing here results in shifted print */
-		if (status->page_out == status->page_decoding) {
-			if (reported_no_paper) {
-				lbp2900_set_attention(state, false);
-				fprintf(stderr, "STATE: -media-empty\n");
-			}
+		if (status->page_out == status->page_decoding)
 			return true;
-		}
 		if (FLAG(status, CAPT_FL_NOPAPER2) || FLAG(status, CAPT_FL_NOPAPER1)) {
-			if (! reported_no_paper) {
-				fprintf(stderr, "STATE: +media-empty\n");
-				fprintf(stderr, "ERROR: CAPT: printer reported no paper; blinking Status button and waiting for user retry\n");
-				lbp2900_set_attention(state, true);
-				reported_no_paper = true;
-			}
-			if (FLAG(status, CAPT_FL_BUTTON)) {
-				fprintf(stderr, "DEBUG: CAPT: retry button pressed while paper is still empty\n");
-				retry_button_pressed = true;
-			}
-			i = 0;
-			sleep(1);
-			continue;
-		}
-		if (reported_no_paper) {
-			if (FLAG(status, CAPT_FL_BUTTON)) {
-				fprintf(stderr, "DEBUG: CAPT: retry button pressed\n");
-				retry_button_pressed = true;
-			}
-			if (! retry_button_pressed) {
-				i = 0;
-				sleep(1);
-				continue;
-			}
-			lbp2900_set_attention(state, false);
-			fprintf(stderr, "STATE: -media-empty\n");
-			reported_no_paper = false;
-			retry_button_pressed = false;
-			i = 0;
+			fprintf(stderr, "STATE: +media-empty\n");
+			fprintf(stderr, "ERROR: CAPT: printer reported no paper; holding job for Print Center resume\n");
+			lbp2900_set_attention(state, true);
+			return false;
 		}
 		if (i < LBP2900_PAGE_OUT_WAIT_SECONDS)
 			sleep(1);

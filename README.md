@@ -40,12 +40,12 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Shows the printer as `Canon LBP2900` without adding `CAPT` to the visible model/description.
 - Sets A4 as the default paper size.
 - Sets `printer-error-policy=stop-printer` so failed jobs stay visible instead of disappearing from the active print session.
-- Reports no-paper/page-output status to CUPS, blinks the printer Status button, and keeps the active page available until the user loads paper and presses the printer button to retry.
+- Reports no-paper/page-output status to CUPS and holds the active job so the user can load paper, then press Resume in Print Center.
 - Disables Canon CAPT BackGrounder by backing up its LaunchAgent to `jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher`, so it cannot restart after reboot and rewrite the patched queue from `usb://...` to `cnbma2://...`.
 
 ## Balanced Speed Mode
 
-The bundled `rastertocapt` filter is tuned for multi-page stability on macOS 27. It waits for the printer to confirm page-out and page-completed status, with conservative safe handoff delays before moving to the next page or ending the job. If the printer reports no paper, the filter reports `media-empty` to CUPS, blinks the printer Status button, then waits for the user to load paper and press the printer button before continuing.
+The bundled `rastertocapt` filter is tuned for multi-page stability on macOS 27. It waits for the printer to confirm page-out and page-completed status, with conservative safe handoff delays before moving to the next page or ending the job. If the printer reports no paper, the filter reports `media-empty` to CUPS, holds the current job, and lets the user resume it from Print Center after loading paper.
 
 ## Verify
 

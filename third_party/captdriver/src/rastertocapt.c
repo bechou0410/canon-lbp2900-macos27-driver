@@ -267,6 +267,41 @@ static void hold_current_job(void)
 		fprintf(stderr, "ERROR: CAPT: failed to hold CUPS job %s\n", job);
 }
 
+static void stop_current_printer(void)
+{
+	int status;
+	pid_t pid;
+	const char *reason = "CAPT: printer needs attention; clear the error and press Resume";
+
+	if (! cups_printer_name || ! cups_printer_name[0]) {
+		fprintf(stderr, "ERROR: CAPT: cannot stop CUPS printer; missing PRINTER\n");
+		return;
+	}
+
+	pid = fork();
+	if (pid == 0) {
+		execl("/usr/sbin/cupsdisable", "cupsdisable", "-r", reason,
+				cups_printer_name, (char *) NULL);
+		_exit(127);
+	}
+	if (pid < 0) {
+		fprintf(stderr, "ERROR: CAPT: cannot fork to stop CUPS printer %s: %s\n",
+				cups_printer_name, strerror(errno));
+		return;
+	}
+	if (waitpid(pid, &status, 0) < 0) {
+		fprintf(stderr, "ERROR: CAPT: cannot wait while stopping CUPS printer %s: %s\n",
+				cups_printer_name, strerror(errno));
+		return;
+	}
+	if (WIFEXITED(status) && WEXITSTATUS(status) == 0)
+		fprintf(stderr, "DEBUG: CAPT: stopped CUPS printer %s after print error\n",
+				cups_printer_name);
+	else
+		fprintf(stderr, "ERROR: CAPT: failed to stop CUPS printer %s\n",
+				cups_printer_name);
+}
+
 static bool do_print(int fd)
 {
 	bool in_job = false;
@@ -344,6 +379,7 @@ static bool do_print(int fd)
 			if (! ok) {
 				fprintf(stderr, "ERROR: CAPT: page %u was not printed; holding job so the user can resume it in Print Center\n", state->ipage);
 				hold_current_job();
+				stop_current_printer();
 				print_failed = true;
 				break;
 			}

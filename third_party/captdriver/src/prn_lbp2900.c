@@ -355,17 +355,29 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 
 	send_job_start(6, status->page_decoding);
 
+	bool reported_no_paper = false;
 	for (unsigned int i = 0; i <= LBP2900_PAGE_OUT_WAIT_SECONDS; i++) {
 		status = lbp2900_get_status(state->ops);
 		/* Interesting. Using page_printing here results in shifted print */
-		if (status->page_out == status->page_decoding)
+		if (status->page_out == status->page_decoding) {
+			if (reported_no_paper)
+				fprintf(stderr, "STATE: -media-empty\n");
 			return true;
+		}
 		if (FLAG(status, CAPT_FL_NOPAPER2) || FLAG(status, CAPT_FL_NOPAPER1)) {
-			fprintf(stderr, "STATE: +media-empty\n");
-			fprintf(stderr, "ERROR: CAPT: printer reported no paper\n");
-			if (FLAG(status, CAPT_FL_PRINTING) || FLAG(status, CAPT_FL_PROCESSING1))
-				continue;
-			return false;
+			if (! reported_no_paper) {
+				fprintf(stderr, "STATE: +media-empty\n");
+				fprintf(stderr, "ERROR: CAPT: printer reported no paper; waiting for paper to keep the job retryable\n");
+				reported_no_paper = true;
+			}
+			i = 0;
+			sleep(1);
+			continue;
+		}
+		if (reported_no_paper) {
+			fprintf(stderr, "STATE: -media-empty\n");
+			reported_no_paper = false;
+			i = 0;
 		}
 		if (i < LBP2900_PAGE_OUT_WAIT_SECONDS)
 			sleep(1);

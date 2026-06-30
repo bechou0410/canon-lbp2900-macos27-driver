@@ -27,6 +27,7 @@ for queue in Canon_LBP2900 Canon_LBP2900_Open Canon_LBP2900_2 Canon_LBP3000_Stat
 done
 
 /usr/bin/pkill -x StatusMonitor 2>/dev/null || true
+/bin/rm -rf /Library/Printers/Canon/LBP2900/StatusMonitor 2>/dev/null || true
 
 /bin/rm -f /etc/cups/ppd/Canon_LBP2900.ppd \
   /etc/cups/ppd/Canon_LBP2900_Open.ppd \

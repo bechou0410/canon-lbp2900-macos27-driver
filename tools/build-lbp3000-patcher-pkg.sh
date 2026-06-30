@@ -9,7 +9,6 @@ PKG="$DIST/CanonLBP2900-macOS27-lbp3000-patcher.pkg"
 FILTER="$PKGROOT/usr/libexec/cups/filter/rastertocapt"
 BUILT_FILTER="$ROOT_DIR/third_party/captdriver/build/rastertocapt"
 PPD="$PKGROOT/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.ppd"
-STATUS_APP="$PKGROOT/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app"
 
 mkdir -p "$DIST"
 
@@ -31,11 +30,8 @@ trap cleanup EXIT
 
 mkdir -p "$PAYLOAD_ROOT/usr/libexec/cups/filter"
 mkdir -p "$PAYLOAD_ROOT/Library/Printers/PPDs/Contents/Resources"
-mkdir -p "$PAYLOAD_ROOT/Library/Printers/Canon/LBP2900/StatusMonitor"
 install -m 0555 "$BUILT_FILTER" "$PAYLOAD_ROOT/usr/libexec/cups/filter/rastertocapt"
 install -m 0644 "$PPD" "$PAYLOAD_ROOT/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.ppd"
-/usr/bin/ditto "$STATUS_APP" "$PAYLOAD_ROOT/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app"
-/bin/chmod 0755 "$PAYLOAD_ROOT/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app/Contents/MacOS/Canon LBP2900 Status Monitor"
 install -m 0755 "$SCRIPTS/preinstall" "$PAYLOAD_SCRIPTS/preinstall"
 install -m 0755 "$SCRIPTS/postinstall" "$PAYLOAD_SCRIPTS/postinstall"
 
@@ -46,7 +42,7 @@ install -m 0755 "$SCRIPTS/postinstall" "$PAYLOAD_SCRIPTS/postinstall"
   --root "$PAYLOAD_ROOT" \
   --scripts "$PAYLOAD_SCRIPTS" \
   --identifier "local.lbp2900.macos27.lbp3000-patcher" \
-  --version "27.2.17" \
+  --version "27.2.18" \
   --install-location "/" \
   "$PKG"
 

@@ -11,12 +11,8 @@ FALLBACK_PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-open-capt.p
 CLONED_PPD="/Library/Printers/PPDs/Contents/Resources/CanonLBP2900-from-LBP3000.ppd"
 QUEUE="Canon_LBP2900"
 BASE_QUEUE="Canon_LBP3000"
-STATUS_QUEUE="Canon_LBP3000_Status"
 BASE_QUEUE_PPD="/etc/cups/ppd/Canon_LBP3000.ppd"
 BASE_RESOURCE_PPD_GZ="/Library/Printers/PPDs/Contents/Resources/CNMC2LBP3000AUK.ppd.gz"
-STATUS_MONITOR="/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
-STATUS_MONITOR_ID="jp.co.canon.CUPSCAPT2.StatusMonitor"
-CUSTOM_STATUS_MONITOR="/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app"
 CAPT_ROOT="/Library/Printers/Canon/CUPSCAPT2"
 BACKGROUND_AGENT="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist"
 BACKGROUND_AGENT_DISABLED="/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher"
@@ -30,10 +26,6 @@ BACKGROUND_PROCESS="Canon CAPT BackGrounder"
 /bin/chmod 0555 "$FILTER"
 /usr/sbin/chown root:wheel "$FALLBACK_PPD"
 /bin/chmod 0644 "$FALLBACK_PPD"
-if [ -d "$CUSTOM_STATUS_MONITOR" ]; then
-  /usr/sbin/chown -R root:wheel "$CUSTOM_STATUS_MONITOR"
-  /bin/chmod 0755 "$CUSTOM_STATUS_MONITOR/Contents/MacOS/Canon LBP2900 Status Monitor"
-fi
 
 TMP_PPD="$(/usr/bin/mktemp -t CanonLBP2900-from-LBP3000.XXXXXX)"
 if [ -f "$BASE_QUEUE_PPD" ]; then
@@ -57,7 +49,7 @@ fi
   s{^\*cupsFilter:.*$}{\*cupsFilter: "application/vnd.cups-raster 1 rastertocapt"}mg;
   s/^\*CNPrinterName:.*$/\*CNPrinterName: "Canon LBP2900"/mg;
   s/^\*%CNUIValue: \*CNUIModelName\(LBP3000\):False$/\*%CNUIValue: \*CNUIModelName\(LBP2900\):False/mg;
-  s{^\*APPrinterUtilityPath:.*$}{\*APPrinterUtilityPath: "/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"}mg;
+  s{^\*APPrinterUtilityPath:.*\n}{}mg;
 ' "$TMP_PPD"
 
 ensure_ppd_line() {
@@ -71,7 +63,6 @@ ensure_ppd_line() {
 ensure_ppd_line "opbidiPlugin" '*opbidiPlugin: "captmoncnab3"'
 ensure_ppd_line "opbidiReadInterval" '*opbidiReadInterval: "2"'
 ensure_ppd_line "ccpdReady" '*ccpdReady: "True"'
-ensure_ppd_line "APPrinterUtilityPath" '*APPrinterUtilityPath: "/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"'
 ensure_ppd_line "APPrinterIconPath" '*APPrinterIconPath: "/Library/Printers/Canon/CUPSCAPT2/Icons/CAPT.icns"'
 ensure_ppd_line "CNPrinterName" '*CNPrinterName: "Canon LBP2900"'
 ensure_ppd_line "CNDriverRootPath" '*CNDriverRootPath: "/Library/Printers/Canon/CUPSCAPT2"'
@@ -83,17 +74,6 @@ ensure_ppd_line "CNBidiModeUSB" '*CNBidiModeUSB: "Both_Di"'
 /usr/sbin/chown root:wheel "$CLONED_PPD"
 /bin/chmod 0644 "$CLONED_PPD"
 echo "Saved LBP3000-derived reference PPD: $CLONED_PPD"
-
-if [ -d "$STATUS_MONITOR" ]; then
-  echo "Detected Canon CAPT StatusMonitor from the original driver."
-else
-  echo "Canon CAPT StatusMonitor was not found; using the bundled LBP2900 status monitor instead."
-fi
-if [ -d "$CUSTOM_STATUS_MONITOR" ]; then
-  echo "Installed bundled LBP2900 status monitor: $CUSTOM_STATUS_MONITOR"
-else
-  echo "Warning: bundled LBP2900 status monitor was not found in the payload."
-fi
 
 MISSING_CAPT_RUNTIME=0
 for path in \
@@ -108,7 +88,7 @@ for path in \
   fi
 done
 if [ "$MISSING_CAPT_RUNTIME" = "1" ]; then
-  echo "Warning: Canon CAPT runtime is incomplete. The bundled status monitor can still show CUPS queue status, but printing may need the original LBP3000/CAPT driver reinstalled."
+  echo "Warning: Canon CAPT runtime is incomplete. Printing may need the original LBP3000/CAPT driver reinstalled."
 fi
 
 CURRENT_USER="$(/usr/bin/stat -f %Su /dev/console 2>/dev/null || true)"
@@ -122,19 +102,9 @@ if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" !
   elif [ -f "$BACKGROUND_AGENT_DISABLED" ]; then
     echo "Canon CAPT BackGrounder LaunchAgent is already disabled by the LBP2900 patcher."
   fi
-  USER_HOME="$(/usr/bin/dscl . -read "/Users/$CURRENT_USER" NFSHomeDirectory 2>/dev/null | /usr/bin/awk '{print $2}')"
-  if [ -n "$USER_HOME" ]; then
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowHeight 2>/dev/null || true
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowOriginX 2>/dev/null || true
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowOriginY 2>/dev/null || true
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults delete "$STATUS_MONITOR_ID" SUIWindowWidth 2>/dev/null || true
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults write "$STATUS_MONITOR_ID" NSQuitAlwaysKeepsWindows -bool false 2>/dev/null || true
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults write "$STATUS_MONITOR_ID" SUICurrentPrinter -string "$STATUS_QUEUE" 2>/dev/null || true
-    /bin/rm -rf "$USER_HOME/Library/Saved Application State/$STATUS_MONITOR_ID.savedState"
-    echo "Reset legacy Canon StatusMonitor persistent UI state for $CURRENT_USER."
-  fi
 fi
 /usr/bin/pkill -f "$BACKGROUND_PROCESS" 2>/dev/null || true
+/bin/rm -rf /Library/Printers/Canon/LBP2900/StatusMonitor 2>/dev/null || true
 
 BASE_URI="$(/usr/bin/lpstat -v "$BASE_QUEUE" 2>/dev/null | /usr/bin/awk -F': ' 'NR == 1 {print $2; exit}')"
 USB_URI=""
@@ -166,16 +136,6 @@ fi
 
 echo "Using USB URI: $USB_URI"
 
-STATUS_URI=""
-case "$USB_URI" in
-  usb://*)
-    STATUS_URI="cnbma2://localhost:59687/usbSP/${USB_URI#usb://}"
-    ;;
-  cnbma2://*)
-    STATUS_URI="$USB_URI"
-    ;;
-esac
-
 echo "Creating $QUEUE with the open CAPT raster PPD. The cloned LBP3000 PPD is kept only as a reference because it blocks the rastertocapt print path on macOS 27."
 /usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$FALLBACK_PPD" -D "Canon LBP2900"
 /usr/sbin/lpadmin -p "$QUEUE" -o printer-error-policy=stop-printer
@@ -184,31 +144,9 @@ echo "Creating $QUEUE with the open CAPT raster PPD. The cloned LBP3000 PPD is k
 /usr/sbin/cupsenable "$QUEUE" 2>/dev/null || true
 /usr/sbin/cupsaccept "$QUEUE" 2>/dev/null || true
 
-if [ -n "$STATUS_URI" ] && [ -d "$STATUS_MONITOR" ]; then
-  STATUS_PPD="$(/usr/bin/mktemp -t CanonLBP3000-Status.XXXXXX)"
-  if [ -f "$BASE_QUEUE_PPD" ]; then
-    /bin/cp "$BASE_QUEUE_PPD" "$STATUS_PPD"
-  else
-    /usr/bin/gunzip -c "$BASE_RESOURCE_PPD_GZ" >"$STATUS_PPD"
-  fi
-  echo "Creating $STATUS_QUEUE for Canon's original StatusMonitor only: $STATUS_URI"
-  /usr/sbin/lpadmin -p "$STATUS_QUEUE" -E -v "$STATUS_URI" -P "$STATUS_PPD" -D "Canon LBP2900 Status"
-  /usr/sbin/lpadmin -p "$STATUS_QUEUE" -o printer-is-shared=false
-  /usr/sbin/cupsenable "$STATUS_QUEUE" 2>/dev/null || true
-  /usr/sbin/cupsaccept "$STATUS_QUEUE" 2>/dev/null || true
-  /bin/rm -f "$STATUS_PPD"
-  if [ -n "$CURRENT_USER" ] && [ "$CURRENT_USER" != "root" ] && [ "$CURRENT_UID" != "0" ]; then
-    /bin/launchctl asuser "$CURRENT_UID" /usr/bin/sudo -u "$CURRENT_USER" /usr/bin/defaults write "$STATUS_MONITOR_ID" SUICurrentPrinter -string "$STATUS_QUEUE" 2>/dev/null || true
-  fi
-else
-  echo "Skipping $STATUS_QUEUE because Canon StatusMonitor or a cnbma2 status URI is unavailable."
-fi
-
 echo "Installed patched queue:"
 /usr/bin/lpstat -v "$QUEUE" 2>/dev/null || true
 /usr/bin/lpstat -p "$QUEUE" -l 2>/dev/null || true
-/usr/bin/lpstat -v "$STATUS_QUEUE" 2>/dev/null || true
-/usr/bin/lpstat -p "$STATUS_QUEUE" -l 2>/dev/null || true
 /bin/ls -l "$FILTER" "$CLONED_PPD" "$FALLBACK_PPD" 2>/dev/null || true
 echo "==== done ===="
 

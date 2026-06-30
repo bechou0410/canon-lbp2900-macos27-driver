@@ -156,6 +156,7 @@ echo "Using USB URI: $USB_URI"
 
 echo "Creating $QUEUE with the open CAPT raster PPD. The cloned LBP3000 PPD is kept only as a reference because it blocks the rastertocapt print path on macOS 27."
 /usr/sbin/lpadmin -p "$QUEUE" -E -v "$USB_URI" -P "$FALLBACK_PPD" -D "Canon LBP2900"
+/usr/sbin/lpadmin -p "$QUEUE" -o printer-error-policy=stop-printer
 /usr/bin/lpoptions -p "$QUEUE" -o PageSize=A4 >/dev/null 2>&1 || true
 /usr/bin/lpoptions -d "$QUEUE" >/dev/null 2>&1 || true
 /usr/sbin/cupsenable "$QUEUE" 2>/dev/null || true

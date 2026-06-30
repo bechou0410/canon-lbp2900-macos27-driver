@@ -39,6 +39,7 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Creates and enables a fresh `Canon_LBP2900` USB queue.
 - Shows the printer as `Canon LBP2900` without adding `CAPT` to the visible model/description.
 - Sets A4 as the default paper size.
+- Sets `printer-error-policy=stop-printer` so failed jobs stay visible instead of disappearing from the active print session.
 - Disables Canon CAPT BackGrounder by backing up its LaunchAgent to `jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher`, so it cannot restart after reboot and rewrite the patched queue from `usb://...` to `cnbma2://...`.
 
 ## Balanced Speed Mode
@@ -62,6 +63,13 @@ cancel -a Canon_LBP2900
 cupsenable Canon_LBP2900
 cupsaccept Canon_LBP2900
 lpstat -t
+```
+
+If a bad file or filter failure stops the queue, the failed job is intentionally kept visible. Fix or cancel the failed job, then re-enable the queue:
+
+```sh
+cupsenable Canon_LBP2900
+cupsaccept Canon_LBP2900
 ```
 
 If `lpstat -t` shows `Canon_LBP2900` using a `cnbma2://.../usbSP/...` device URI, rerun the patcher. The working LBP2900 queue should use a direct `usb://Canon/LBP2900...` URI. On v27.2.9 and newer, the patcher also disables Canon CAPT BackGrounder persistently so this should not come back after reboot.

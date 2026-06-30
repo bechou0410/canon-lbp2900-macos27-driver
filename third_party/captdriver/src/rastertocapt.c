@@ -230,9 +230,10 @@ static void do_cancel(int s)
 	exit(1);
 }
 
-static void do_print(int fd)
+static bool do_print(int fd)
 {
 	bool in_job = false;
+	bool printed_any = false;
 	ops = printer_detect();
 
 	if (ops->alloc_state)
@@ -329,11 +330,13 @@ static void do_print(int fd)
 		in_job = false;
 	}
 
-	if (! state->ipage)
+	printed_any = state->ipage != 0;
+	if (! printed_any)
 		fprintf(stderr, "ERROR: CAPT: no pages in job\n");
 
 	cupsRasterClose(raster);
 	free_state();
+	return printed_any;
 }
 
 
@@ -374,11 +377,11 @@ int main(int argc, char *argv[])
 	}
 
 	fprintf(stderr, "DEBUG: CAPT: rastertocapt started\n");
-	do_print(fd);
+	bool ok = do_print(fd);
 	fprintf(stderr, "DEBUG: CAPT: rastertocapt finished\n");
 
 	if (argc == 7)
 		close(fd);
 
-	return 0;
+	return ok ? 0 : 1;
 }

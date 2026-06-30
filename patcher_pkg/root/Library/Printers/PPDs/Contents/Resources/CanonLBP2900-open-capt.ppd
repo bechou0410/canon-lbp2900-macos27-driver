@@ -28,7 +28,7 @@
 *opbidiPlugin: "captmoncnab3"
 *opbidiReadInterval: "2"
 *ccpdReady: "True"
-*APPrinterUtilityPath: "/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app"
+*APPrinterUtilityPath: "/Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app"
 *APPrinterIconPath: "/Library/Printers/Canon/CUPSCAPT2/Icons/CAPT.icns"
 *%CNPrintLang: CAPT
 *CNTblModel: "1"

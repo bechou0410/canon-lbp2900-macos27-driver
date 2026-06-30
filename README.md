@@ -8,6 +8,12 @@ The patcher creates this printer queue:
 Canon_LBP2900
 ```
 
+It also creates this Canon-compatible status queue for Canon's original StatusMonitor:
+
+```text
+Canon_LBP3000_Status
+```
+
 ## Download
 
 Use the latest patcher release:
@@ -37,10 +43,12 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Uses Canon's LBP3000/CAPT install as the runtime source, but keeps the LBP2900 queue on the open `rastertocapt` print path.
 - Removes old conflicting LBP2900 patch queues, but does not remove `Canon_LBP3000`.
 - Creates and enables a fresh `Canon_LBP2900` USB queue.
+- Creates `Canon_LBP3000_Status`, a status-only queue that keeps Canon's original StatusMonitor from reporting "There are no registered printers."
 - Shows the printer as `Canon LBP2900` without adding `CAPT` to the visible model/description.
 - Sets A4 as the default paper size.
 - Sets `printer-error-policy=stop-printer` so failed jobs stay visible instead of disappearing from the active print session.
-- Installs a bundled `Canon LBP2900 Status Monitor.app` and points the printer utility button to it instead of Canon's legacy StatusMonitor.
+- Points the printer utility button to Canon's original StatusMonitor and sets its current printer to `Canon_LBP3000_Status`.
+- Installs a bundled `Canon LBP2900 Status Monitor.app` as a fallback queue-status viewer.
 - Reports no-paper/page-output status to CUPS, blinks the printer Status button, and keeps the active page available until the user loads paper and presses the printer button to retry.
 - Disables Canon CAPT BackGrounder by backing up its LaunchAgent to `jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher`, so it cannot restart after reboot and rewrite the patched queue from `usb://...` to `cnbma2://...`.
 
@@ -50,7 +58,9 @@ The bundled `rastertocapt` filter is tuned for multi-page stability on macOS 27.
 
 ## Status Monitor
 
-This patcher installs `/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app`. It reads the CUPS queue status and shows Paper Out, stopped queue, recent jobs, and the current USB device. Open it from the printer utility button or directly from Finder.
+Canon's original StatusMonitor does not recognize the patched `Canon_LBP2900` raster queue as a registered CAPT printer. The patcher creates a separate `Canon_LBP3000_Status` queue with Canon's original LBP3000 metadata and a `cnbma2://.../usbSP/...` device URI so the original StatusMonitor can open and monitor the printer.
+
+The bundled fallback monitor is still installed at `/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app`. It reads the CUPS queue status and shows Paper Out, stopped queue, recent jobs, and the current USB device.
 
 ## Verify
 
@@ -82,13 +92,20 @@ If `lpstat -t` shows `Canon_LBP2900` using a `cnbma2://.../usbSP/...` device URI
 
 If CUPS says the job completed but no paper comes out, power-cycle the printer, unplug USB for 10 seconds, reconnect USB, then print again.
 
-If you want to open the bundled status monitor directly:
+If Canon StatusMonitor still says there are no registered printers, confirm the status queue exists:
+
+```sh
+lpstat -v Canon_LBP3000_Status
+defaults read jp.co.canon.CUPSCAPT2.StatusMonitor SUICurrentPrinter
+```
+
+If you want to open the bundled fallback status monitor directly:
 
 ```sh
 open -n "/Library/Printers/Canon/LBP2900/StatusMonitor/Canon LBP2900 Status Monitor.app"
 ```
 
-Canon's original StatusMonitor is no longer required for the patched LBP2900 queue. The patcher still requires Canon's original LBP3000/CAPT driver as a source for runtime and PPD files under:
+The patcher requires Canon's original LBP3000/CAPT driver as a source for runtime and PPD files under:
 
 ```text
 /Library/Printers/Canon/CUPSCAPT2

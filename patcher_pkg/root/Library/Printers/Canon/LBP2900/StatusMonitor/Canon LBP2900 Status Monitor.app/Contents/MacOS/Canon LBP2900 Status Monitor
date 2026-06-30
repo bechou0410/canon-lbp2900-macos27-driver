@@ -1,0 +1,102 @@
+#!/bin/bash
+set -u
+
+PATH="/usr/bin:/bin:/usr/sbin:/sbin"
+QUEUE="${LBP2900_QUEUE:-Canon_LBP2900}"
+
+open_print_center() {
+  if [ -d "/System/Library/CoreServices/Applications/Print Center.app" ]; then
+    /usr/bin/open -a "/System/Library/CoreServices/Applications/Print Center.app" 2>/dev/null || true
+  else
+    /usr/bin/open "x-apple.systempreferences:com.apple.Print-Scan-Settings.extension" 2>/dev/null || true
+  fi
+}
+
+queue_status() {
+  /usr/bin/lpstat -p "$QUEUE" -l 2>&1
+}
+
+job_status() {
+  /usr/bin/lpstat -W all -o "$QUEUE" 2>&1 | /usr/bin/tail -10
+}
+
+device_status() {
+  /usr/bin/lpstat -v "$QUEUE" 2>&1 | /usr/bin/sed 's/^device for //'
+}
+
+dialog() {
+  title="$1"
+  message="$2"
+  icon="$3"
+  /usr/bin/osascript - "$title" "$message" "$icon" <<'OSA'
+on run argv
+	set dialogTitle to item 1 of argv
+	set dialogMessage to item 2 of argv
+	set dialogIcon to item 3 of argv
+	try
+		if dialogIcon is "caution" then
+			set r to display dialog dialogMessage buttons {"Dong", "Mo Print Center", "Lam moi"} default button "Lam moi" with title dialogTitle with icon caution
+		else
+			set r to display dialog dialogMessage buttons {"Dong", "Mo Print Center", "Lam moi"} default button "Lam moi" with title dialogTitle with icon note
+		end if
+		return button returned of r
+	on error number -128
+		return "Dong"
+	end try
+end run
+OSA
+}
+
+while true; do
+  STATUS="$(queue_status)"
+  JOBS="$(job_status)"
+  DEVICE="$(device_status)"
+
+  TITLE="Canon LBP2900"
+  ICON="note"
+  SUMMARY="May in dang san sang."
+  ACTION="Neu vua nap giay, hay bam nut Status/Resume tren may in khi den do dang nhap nhay."
+
+  if printf '%s\n' "$STATUS" | /usr/bin/grep -Eiq 'media-empty|paper out|no paper|printer reported no paper'; then
+    TITLE="Canon LBP2900 - Paper Out"
+    ICON="caution"
+    SUMMARY="May in dang bao het giay."
+    ACTION="Nap giay, sau do bam nut Status/Resume dang nhap nhay do tren may in de retry trang hien tai."
+  elif printf '%s\n' "$STATUS" | /usr/bin/grep -Eiq 'disabled|stopped|rejecting'; then
+    TITLE="Canon LBP2900 - Queue Stopped"
+    ICON="caution"
+    SUMMARY="Hang doi in dang bi dung hoac khong nhan job moi."
+    ACTION="Huy job loi neu can, sau do mo Print Center hoac chay cupsenable/cupsaccept cho Canon_LBP2900."
+  elif printf '%s\n' "$JOBS" | /usr/bin/grep -Eq "^$QUEUE-[0-9]+"; then
+    TITLE="Canon LBP2900 - Printing"
+    ICON="note"
+    SUMMARY="Dang co job in gan day hoac dang xu ly."
+    ACTION="Neu may in bao loi, xem den tren may in va bam nut Status/Resume sau khi xu ly loi."
+  fi
+
+  MESSAGE="$SUMMARY
+
+$ACTION
+
+Queue:
+$STATUS
+
+Device:
+$DEVICE
+
+Jobs:
+$JOBS"
+
+  CHOICE="$(dialog "$TITLE" "$MESSAGE" "$ICON")"
+  case "$CHOICE" in
+    "Mo Print Center")
+      open_print_center
+      ;;
+    "Lam moi")
+      continue
+      ;;
+    *)
+      exit 0
+      ;;
+  esac
+done

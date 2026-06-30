@@ -40,11 +40,12 @@ If macOS blocks the unsigned package, right-click the `.pkg`, choose Open, then 
 - Shows the printer as `Canon LBP2900` without adding `CAPT` to the visible model/description.
 - Sets A4 as the default paper size.
 - Sets `printer-error-policy=stop-printer` so failed jobs stay visible instead of disappearing from the active print session.
+- Reports no-paper/page-output failures to CUPS and stops the job quickly, so Print Center keeps the failed session visible instead of marking it as completed.
 - Disables Canon CAPT BackGrounder by backing up its LaunchAgent to `jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher`, so it cannot restart after reboot and rewrite the patched queue from `usb://...` to `cnbma2://...`.
 
 ## Balanced Speed Mode
 
-The bundled `rastertocapt` filter is tuned for multi-page stability on macOS 27. It waits for the printer to confirm page-out and page-completed status, with conservative safe handoff delays before moving to the next page or ending the job. This can keep CUPS in the sending state longer, but it avoids dropping later pages on real Canon LBP2900 hardware.
+The bundled `rastertocapt` filter is tuned for multi-page stability on macOS 27. It waits for the printer to confirm page-out and page-completed status, with conservative safe handoff delays before moving to the next page or ending the job. If the printer reports no paper or the page cannot be output, the filter now fails fast and lets CUPS keep the stopped job visible.
 
 ## Verify
 
@@ -65,7 +66,7 @@ cupsaccept Canon_LBP2900
 lpstat -t
 ```
 
-If a bad file or filter failure stops the queue, the failed job is intentionally kept visible. Fix or cancel the failed job, then re-enable the queue:
+If a bad file, no-paper condition, or filter failure stops the queue, the failed job is intentionally kept visible. Fix or cancel the failed job, then re-enable the queue:
 
 ```sh
 cupsenable Canon_LBP2900

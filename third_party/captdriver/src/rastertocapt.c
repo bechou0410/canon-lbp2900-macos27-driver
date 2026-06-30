@@ -234,6 +234,7 @@ static bool do_print(int fd)
 {
 	bool in_job = false;
 	bool printed_any = false;
+	bool print_failed = false;
 	ops = printer_detect();
 
 	if (ops->alloc_state)
@@ -304,9 +305,9 @@ static bool do_print(int fd)
 		if (ops->page_epilogue) {
 			bool ok = ops->page_epilogue(state, &cached_page->dims);
 			if (! ok) {
-				fprintf(stderr, "DEBUG: CAPT: rastertocapt: page not printed\n");
-				ops->wait_user(state);
-				continue;
+				fprintf(stderr, "ERROR: CAPT: page %u was not printed; stopping job so CUPS keeps the failed session visible\n", state->ipage);
+				print_failed = true;
+				break;
 			}
 		}
 
@@ -323,7 +324,12 @@ static bool do_print(int fd)
 		}
 	}
 
-	if (in_job) {
+	if (in_job && print_failed) {
+		fprintf(stderr, "DEBUG: CAPT: rastertocapt: cancel job after printer error\n");
+		if (ops->cancel_cleanup)
+			ops->cancel_cleanup(state);
+		in_job = false;
+	} else if (in_job) {
 		fprintf(stderr, "DEBUG: CAPT: rastertocapt: end job\n");
 		if (ops->job_epilogue)
 			ops->job_epilogue(state);
@@ -335,8 +341,12 @@ static bool do_print(int fd)
 		fprintf(stderr, "ERROR: CAPT: no pages in job\n");
 
 	cupsRasterClose(raster);
+	if (cached_page) {
+		free_cached_page(cached_page);
+		cached_page = NULL;
+	}
 	free_state();
-	return printed_any;
+	return printed_any && ! print_failed;
 }
 
 

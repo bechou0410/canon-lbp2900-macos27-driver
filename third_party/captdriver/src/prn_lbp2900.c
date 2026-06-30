@@ -361,7 +361,8 @@ static bool lbp2900_page_epilogue(struct printer_state_s *state, const struct pa
 		if (status->page_out == status->page_decoding)
 			return true;
 		if (FLAG(status, CAPT_FL_NOPAPER2) || FLAG(status, CAPT_FL_NOPAPER1)) {
-			fprintf(stderr, "DEBUG: CAPT: no paper\n");
+			fprintf(stderr, "STATE: +media-empty\n");
+			fprintf(stderr, "ERROR: CAPT: printer reported no paper\n");
 			if (FLAG(status, CAPT_FL_PRINTING) || FLAG(status, CAPT_FL_PROCESSING1))
 				continue;
 			return false;

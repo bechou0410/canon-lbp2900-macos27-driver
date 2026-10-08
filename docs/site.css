@@ -60,8 +60,9 @@ main, .topbar, .site-footer { width: min(100% - 2.5rem, 78rem); margin-inline: a
 .status-dot { display: inline-block; flex: 0 0 auto; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--color-blue); }
 .hero__lede { max-width: 37rem; color: var(--color-ink-soft); font-size: clamp(1rem, 1.3vw, 1.18rem); line-height: 1.7; }
 .hero__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 1.4rem; padding-block-start: 0.2rem; }
+.hero__download { display: grid; justify-items: start; gap: 0.1rem; }
 .hero__proof { padding-block-start: 0.3rem; color: var(--color-ink-muted); font-family: var(--font-mono); font-size: 0.68rem; }
-.download-stats { font-variant-numeric: tabular-nums; }
+.download-stats { padding-block-start: 0; font-variant-numeric: tabular-nums; }
 .hero-shot { min-width: 0; }
 .hero-shot__label { display: flex; align-items: center; gap: 0.6rem; padding-block-end: 0.7rem; border-block-end: 1px solid var(--color-line); font-family: var(--font-mono); font-size: 0.68rem; }
 .hero-shot__label span:last-child { margin-inline-start: auto; color: var(--color-blue); }

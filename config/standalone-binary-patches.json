@@ -136,7 +136,10 @@
         "before": "41 c7 86 68 04 00 00 27 e9 00 00",
         "port": 59687
       }
-    ]
+    ],
+    "dependencies": {
+      "/usr/lib/libcups.2.dylib": "@loader_path/lb29.dylib"
+    }
   },
   "Library/Printers/Canon/CUPSCAPT2/Libs/ColorGearCMMC.bundle/Contents/MacOS/ColorGearCMMC": {
     "sha256": "64d59f9971e7dab2483f30b3416647b32b519af4ae2c92f3427a45850ec6f6df",

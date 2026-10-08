@@ -55,6 +55,43 @@ class StandaloneTest(unittest.TestCase):
             result = subprocess.run(["/bin/sh", "-c", function + '\nQUEUE="$1"; queue_exists', "probe", queues[0]], capture_output=True)
             self.assertEqual(result.returncode, 0)
 
+    def test_cancel_bridge_survives_fork_and_real_cups_failure(self):
+        directory = self.work / "cancel bridge with spaces"
+        directory.mkdir()
+        for name in ("lb29.dylib", "lb29-cancel"):
+            original = ROOT / standalone.RUNTIME / "CCPD" / name
+            copied = directory / name
+            shutil.copy2(original, copied)
+            self.assertEqual(sorted(a for a, _, _ in standalone.macho.slices(copied.read_bytes())), ["arm64", "x86_64"])
+            self.assertEqual(native.run("codesign", "--verify", "--strict", "--all-architectures", copied).returncode, 0)
+        probe = directory / "probe"
+        result = native.run("xcrun", "clang", "-arch", "arm64", "-arch", "x86_64",
+                            "-Wall", "-Wextra", "-Werror", "-Wno-deprecated-declarations",
+                            PROJECT / "tests/fork-cancel-probe.c", "-framework", "CoreFoundation", "-lcups", "-o", probe)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        data, changes = standalone.macho.redirect_dependencies(probe.read_bytes(),
+                            {"/usr/lib/libcups.2.dylib": "@loader_path/lb29.dylib"})
+        self.assertEqual(len(changes), 2)
+        probe.write_bytes(data)
+        standalone.sign(probe)
+        result = native.run(probe, timeout=40)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("child_signal=0 child_exit=0", result.stdout)
+        # The other imported API, cupsSetUser, must still resolve via re-export.
+        (directory / "lb29-cancel").unlink()
+        result = native.run(probe, timeout=5)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("child_signal=0 child_exit=0", result.stdout)
+
+    def test_cancel_helper_rejects_invalid_and_nonexistent_jobs(self):
+        helper = ROOT / standalone.RUNTIME / "CCPD/lb29-cancel"
+        for args in ((), ("printer",), ("", "1"), ("printer", "0"), ("printer", "-1"),
+                     ("printer", "2147483648"), ("printer", "bad")):
+            result = native.run(helper, *args, timeout=5)
+            self.assertEqual(result.returncode, 2, args)
+        result = native.run(helper, "LBP2900_nonexistent_cancel_regression", "2147483647", timeout=35)
+        self.assertEqual(result.returncode, 1, result.stderr)
+
     def test_queue_state_uses_live_ipp_enums(self):
         definitions = (PROJECT / "package/standalone/lbp2900-standalone").read_text().split('case "${1:-}" in', 1)[0]
         listed = subprocess.check_output(["/usr/bin/lpstat", "-v"], text=True)
@@ -138,6 +175,10 @@ class StandaloneTest(unittest.TestCase):
                 if dependency in identities:
                     continue
                 if dependency.startswith(("/System/", "/usr/lib/")):
+                    continue
+                if dependency.startswith("@loader_path/"):
+                    resolved = installed.parent / dependency.removeprefix("@loader_path/")
+                    self.assertTrue(resolved.is_file() and resolved.resolve().is_relative_to((ROOT / standalone.RUNTIME).resolve()))
                     continue
                 if dependency.startswith("@rpath/"):
                     candidates = [Path(p.replace("@loader_path", str(installed.parent))) / dependency.removeprefix("@rpath/") for p in rpaths]

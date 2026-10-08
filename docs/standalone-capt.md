@@ -1,6 +1,6 @@
-# Canon LBP2900 v27.3.2 — technical guide
+# Canon LBP2900 v27.3.3 — technical guide
 
-**Bản hiện tại: Canon LBP2900 v27.3.2**, dành cho mục tiêu LBP2900/2900B. Tên bộ cài và máy in bỏ “CAPT” và “Standalone”; tên công cụ, receipt và runtime nội bộ giữ nguyên để tương thích. v27.3.2 là phiên bản project; máy thử chạy macOS 27.2.
+**Bản hiện tại: Canon LBP2900 v27.3.3**, dành cho mục tiêu LBP2900/2900B. Tên bộ cài và máy in bỏ “CAPT” và “Standalone”; tên công cụ, receipt và runtime nội bộ giữ nguyên để tương thích. v27.3.3 là phiên bản project; máy thử chạy macOS 27.2.
 
 Xem [README tiếng Anh](../README.md), [README tiếng Việt](../README.vi.md) và [phạm vi nghiệm thu](verification.md). Bộ cài có tài nguyên Anh/Việt, bản tự chọn theo ngôn ngữ macOS với dự phòng tiếng Anh, chỉ phát hành một PKG chung. Nội dung Canon gốc vẫn là tiếng Anh.
 
@@ -35,7 +35,7 @@ python3 tools/capt-standalone.py
 python3 tests/standalone-test.py
 ```
 
-Đầu ra: `artifacts/Canon-LBP2900-v27.3.2.pkg` và file `.sha256` cùng tên. Build xác minh lại DMG gốc, chữ ký installer Canon và notarization; giải nén mới, chọn payload, patch/ký, đóng gói rồi giải nén PKG để kiểm checksum. Gói cục bộ chứa thành phần bản quyền Canon và kèm license gốc trong màn hình Installer. Payload Canon không đưa vào Git; archive bộ cài phát hành giữ license và thông báo bản quyền gốc.
+Đầu ra: `artifacts/Canon-LBP2900-v27.3.3.pkg` và file `.sha256` cùng tên. Build xác minh lại DMG gốc, chữ ký installer Canon và notarization; giải nén mới, chọn payload, patch/ký, đóng gói rồi giải nén PKG để kiểm checksum. Gói cục bộ chứa thành phần bản quyền Canon và kèm license gốc trong màn hình Installer. Payload Canon không đưa vào Git; archive bộ cài phát hành giữ license và thông báo bản quyền gốc.
 
 `config/standalone-binary-patches.json` là nguồn của các vị trí/hằng số được sửa. `tools/capt-standalone.py:selected()` sở hữu danh sách thành phần giữ lại. `relocation.json`, `installed.sha256`, `installed-paths.txt` được sinh trong payload để truy vết và kiểm tra file; không chỉnh thủ công.
 
@@ -55,7 +55,7 @@ Tên hiển thị là **Canon LBP2900**. Không đổi máy in mặc định. Tr
 
 Với nhiều thiết bị, lấy URI cụ thể từ `lpinfo -v` rồi dùng lệnh `configure USB_URI`. Helper từ chối queue cùng tên không thuộc nó, job chưa xong hoặc monitor gốc còn giữ đúng USB. Hoàn tất mọi job và đăng xuất/đăng nhập lại nếu monitor cũ chưa dừng.
 
-Installer không tự in. Nó từ chối runtime riêng đã có; muốn cài lại phải gỡ trước bằng helper. Chưa có Developer ID Installer/notarization; không cần thay đổi SIP/Gatekeeper trong quy trình đã kiểm.
+Installer không tự in. Có thể cài đè runtime riêng còn nguyên vẹn theo quy trình ở cuối tài liệu. Chưa có Developer ID Installer/notarization; không cần thay đổi SIP/Gatekeeper trong quy trình đã kiểm.
 
 ## Kiểm tra và gỡ
 
@@ -96,3 +96,11 @@ Preinstall dùng manifest/checksum và danh sách file để nhận diện bản
 Postinstall kiểm payload mới, dọn các file của bản cũ không còn trong payload, khởi động lại các phiên dịch vụ còn đăng nhập và phục hồi queue vốn đang chạy; queue vốn tạm dừng vẫn tạm dừng. Nếu không còn queue riêng thì chạy nhận diện USB như cài mới. File Canon gốc và Epson nằm ngoài đường dẫn sở hữu.
 
 Nếu cài bị gián đoạn, chạy lại PKG. Gói chỉ phục hồi trạng thái đã lưu khi integrity của bản đang có đạt; payload không nguyên vẹn cần kiểm tra log trước, không tự xóa thư mục Canon. Cần hoàn tất/hủy job trong Canon Utility kể cả job đã bàn giao khỏi CUPS.
+
+## Sửa lỗi Cancel từ v27.3.3
+
+Khi Cancel trong Utility lúc hết giấy, CCPD có thể gọi phần bản địa hóa của libcups trong tiến trình con sau fork và bị Objective-C abort. Đã xác nhận hai báo cáo crash trên macOS 27.2; mất CCPD có thể để monitor USB còn chạy vòng lặp. Các lần Cancel thành công trước không bao phủ tình huống này.
+
+Bản mới đổi duy nhất dependency libcups của CCPD sang `@loader_path/lb29.dylib`, có kiểm hash và load command trên cả hai kiến trúc. Bridge re-export libcups hệ thống, chỉ thay `cupsCancelJob`: chạy helper `CCPD/lb29-cancel` bằng posix_spawn rồi lấy kết quả thật. Helper gọi libcups trong tiến trình mới với tài khoản thực thi thực tế; bỏ việc khai tên root trong phiên desktop vì CUPS từ chối hủy job thuộc người dùng. Không tắt kiểm tra fork của Objective-C, không dùng shell, không hủy toàn bộ job. Tạm giữ SIGCHLD ở mặc định trong lúc đợi helper rồi phục hồi handler Canon; tránh handler cũ làm CCPD thoát khi helper kết thúc. Helper bị giới hạn 30 giây và không giữ file descriptor riêng của daemon.
+
+Kiểm thử gọi CUPS thật với queue/job không tồn tại sau fork, kiểm kết quả lỗi và việc giữ/phục hồi signal handler; không gửi job in. Hai thành phần mới build universal arm64/x86_64 từ `native/`, ký ad-hoc và nằm trong manifest integrity. Cài lại qua lifecycle hiện có dừng monitor cũ trước khi thay file. Người dùng đã cài v27.3.3 và xác nhận thử lại Cancel với khay trống hoạt động trơn tru trên LBP2900/macOS 27.2. Kiểm tra sau đó: integrity đạt, không có báo cáo crash CCPD/StatusMonitor mới, PPD Canon/Epson và trạng thái máy in mặc định giữ nguyên.

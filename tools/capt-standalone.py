@@ -31,7 +31,7 @@ BACKEND = Path("usr/libexec/cups/backend/lb29u2")
 AGENT = Path("Library/LaunchAgents/jp.co.canon.LBP2900RT.BG.plist")
 BG = "BackGrounder/Canon 2900 BackGrounder.app"
 UTILITY = "StatusMonitor/StatusMonitor.app"
-VERSION = "27.3.2"
+VERSION = "27.3.3"
 PACKAGE = f"Canon-LBP2900-v{VERSION}.pkg"
 BINARY_PATCHES = json.loads((PROJECT / "config/standalone-binary-patches.json").read_text())
 SHARED_DIRECTORIES = (
@@ -114,6 +114,19 @@ def make_ppd(payload):
     return "".join(lines).replace("CUPSCAPT2", "LBP2900RT").replace("captmoncnab3", "lb29monitor").encode()
 
 
+def build_cancel_bridge(root):
+    directory = root / RUNTIME / "CCPD"
+    common = ["xcrun", "clang", "-arch", "arm64", "-arch", "x86_64", "-mmacosx-version-min=11.0",
+              "-O2", "-Wall", "-Wextra", "-Werror"]
+    source.run(*common, "-dynamiclib", PROJECT / "native/cups-cancel-bridge.c",
+               "-Wl,-reexport-lcups", "-Wl,-install_name,@loader_path/lb29.dylib",
+               "-compatibility_version", "2.0.0", "-current_version", "2.14.0", "-o", directory / "lb29.dylib")
+    source.run(*common, "-Wno-deprecated-declarations", PROJECT / "native/cups-cancel-helper.c",
+               "-lcups", "-o", directory / "lb29-cancel")
+    for name in ("lb29.dylib", "lb29-cancel"):
+        sign(directory / name)
+
+
 def assemble(payload, root):
     source.validate_source(payload)
     root.mkdir(parents=True)
@@ -148,6 +161,7 @@ def assemble(payload, root):
             target.write_bytes(plistlib.dumps(info))
         report["files"][str(target.relative_to(root))] = entry
 
+    build_cancel_bridge(root)
     # Resign bundles inside out after resource pruning and identifier relocation.
     bundles = [p for p in root.rglob("*") if p.suffix in (".app", ".plugin", ".bundle", ".framework") and p.is_dir()]
     for bundle in sorted(bundles, key=lambda p: len(p.parts), reverse=True):

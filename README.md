@@ -4,7 +4,7 @@
 
 A complete USB driver package for **Canon LBP2900 / LBP2900B**, including Canon Printer Utility, macOS Print Center integration and native Canon print options. Install it directly—no separate Canon driver installation is required.
 
-**[Download Canon LBP2900 v27.3.2](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.2/Canon-LBP2900-v27.3.2.pkg)** · [Release notes and checksum](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/tag/v27.3.2)
+**[Download Canon LBP2900 v27.3.3](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.3/Canon-LBP2900-v27.3.3.pkg)** · [Release notes and checksum](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/tag/v27.3.3)
 
 One installer contains English and Vietnamese content and follows macOS language preferences, with English as fallback. Canon Utility and native print dialogs remain in English.
 
@@ -15,7 +15,7 @@ One installer contains English and Vietnamese content and follows macOS language
 <tr><td><a href="docs/images/installer-preview.png"><img src="docs/images/installer-preview.png" alt="Installer" width="100%"></a></td><td><a href="docs/images/utility-ready.png"><img src="docs/images/utility-ready.png" alt="Ready to Print" width="100%"></a></td><td><a href="docs/images/utility-cover-open.png"><img src="docs/images/utility-cover-open.png" alt="Top Cover Open" width="100%"></a></td><td><a href="docs/images/utility-out-of-paper.png"><img src="docs/images/utility-out-of-paper.png" alt="Out of Paper" width="100%"></a></td></tr>
 </table>
 
-Screenshots supplied by the user from the installed driver: the installer, Ready to Print, top-cover detection and an out-of-paper alert. Click an image to view it at full size. The installer screenshot shows v27.3.1; this release consolidates packaging while preserving the same driver and Utility code.
+Screenshots supplied by the user from the installed driver: the installer, Ready to Print, top-cover detection and an out-of-paper alert. Click an image to view it at full size. The installer screenshot shows v27.3.1; v27.3.3 adds a fix for the background service crashing when cancelling an errored job.
 
 ## Features and verification
 
@@ -23,11 +23,11 @@ Screenshots supplied by the user from the installed driver: the installer, Ready
 |---|---|
 | USB printing | Verified on LBP2900, Apple Silicon and macOS 27.2; six user-confirmed sheets during driver validation. |
 | Printer status | Ready, out of paper, cover open and USB disconnect/reconnect verified. |
-| Job controls | Pause, Resume and Cancel verified in Canon Printer Utility. |
+| Job controls | Pause/Resume verified. v27.3.3 fixes a newly reproduced Cancel crash after a paper error; automated regression passes and the user confirmed a successful empty-tray retest on LBP2900/macOS 27.2. |
 | macOS Print Center | Queue controls and opening Printer Utility verified. |
 | Canon print options | Finishing, Paper Source, Quality/Toner and About dialogs load correctly. |
 | Dedicated driver runtime | Separate from the original Canon driver; an official Canon reinstall preserved the private driver and a real print. |
-| Reinstall / upgrade | Built-in support preserves queues and settings; automated payload tests pass. Live Installer upgrade qualification remains open. |
+| Reinstall / upgrade | Live upgrade to v27.3.3 preserved both printer PPDs and the default-printer state. Same-version reinstall and historical upgrades also pass automated payload tests. |
 
 **Test scope:** LBP2900 / Apple Silicon / macOS 27.2. The package is experimental; LBP2900B and Intel hardware, other Macs/macOS versions, reboot/login recovery, Cleaning, every physical media/quality option and endurance still need qualification. The release number is the driver version. See [verification evidence](docs/verification.md).
 

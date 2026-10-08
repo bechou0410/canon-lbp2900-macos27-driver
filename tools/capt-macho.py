@@ -61,6 +61,37 @@ def text_sections(data):
     return result
 
 
+def redirect_dependencies(data, replacements):
+    """Change only existing LC_LOAD_DYLIB names, within their allocated space."""
+    mutable = bytearray(data)
+    changes = []
+    for arch, offset, _ in slices(data):
+        found = set()
+        cursor = offset + 32
+        for _ in range(struct.unpack_from("<I", data, offset + 16)[0]):
+            command, size = struct.unpack_from("<II", data, cursor)
+            if command == 0xc:
+                start = cursor + struct.unpack_from("<I", data, cursor + 8)[0]
+                end = data.index(b"\0", start, cursor + size)
+                name = data[start:end].decode()
+                if name in replacements:
+                    if name in found:
+                        raise ValueError("Duplicate dependency to redirect")
+                    after = replacements[name].encode() + b"\0"
+                    before = data[start:cursor + size]
+                    if len(after) > len(before) or any(data[end:cursor + size]):
+                        raise ValueError("Dependency does not fit existing load command")
+                    after = after.ljust(len(before), b"\0")
+                    mutable[start:cursor + size] = after
+                    changes.append({"offset": start, "before": before.hex(), "after": after.hex(),
+                                    "kind": "dependency", "arch": arch})
+                    found.add(name)
+            cursor += size
+        if found != set(replacements):
+            raise ValueError(f"Missing dependency in {arch}")
+    return bytes(mutable), changes
+
+
 def relocate(data, patch, monitor=False):
     original = data
     changes = []
@@ -90,6 +121,8 @@ def relocate(data, patch, monitor=False):
             changes.append({"offset": start, "before": before.hex(), "after": after.hex(), "kind": "port",
                             "arch": arch, "address": instruction["address"]})
         data = bytes(mutable)
+    data, dependencies = redirect_dependencies(data, patch.get("dependencies", {}))
+    changes.extend(dependencies)
     expected_code = text_sections(data)
     if monitor:
         if data.count(b"\0MDL:LBP3000;\0") != 2:

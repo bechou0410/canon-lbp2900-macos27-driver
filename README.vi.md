@@ -4,7 +4,7 @@
 
 Bộ driver USB đầy đủ dành cho **Canon LBP2900 / LBP2900B**, tích hợp Canon Printer Utility, Print Center của macOS và các tùy chọn in Canon gốc. Cài trực tiếp, không cần cài thêm bộ driver Canon riêng.
 
-**[Tải Canon LBP2900 v27.3.2](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.2/Canon-LBP2900-v27.3.2.pkg)** · [Ghi chú phát hành và checksum](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/tag/v27.3.2)
+**[Tải Canon LBP2900 v27.3.3](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.3/Canon-LBP2900-v27.3.3.pkg)** · [Ghi chú phát hành và checksum](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/tag/v27.3.3)
 
 Một bộ cài chứa tiếng Anh và tiếng Việt, tự chọn theo ngôn ngữ ưu tiên của macOS; tiếng Anh là ngôn ngữ dự phòng. Utility và hộp thoại in Canon gốc vẫn dùng tiếng Anh.
 
@@ -15,7 +15,7 @@ Một bộ cài chứa tiếng Anh và tiếng Việt, tự chọn theo ngôn ng
 <tr><td><a href="docs/images/installer-preview.png"><img src="docs/images/installer-preview.png" alt="Bộ cài" width="100%"></a></td><td><a href="docs/images/utility-ready.png"><img src="docs/images/utility-ready.png" alt="Sẵn sàng in" width="100%"></a></td><td><a href="docs/images/utility-cover-open.png"><img src="docs/images/utility-cover-open.png" alt="Cảnh báo mở nắp" width="100%"></a></td><td><a href="docs/images/utility-out-of-paper.png"><img src="docs/images/utility-out-of-paper.png" alt="Cảnh báo hết giấy" width="100%"></a></td></tr>
 </table>
 
-Ảnh người dùng cung cấp từ driver đã cài: bộ cài, sẵn sàng in, nhận diện mở nắp và cảnh báo hết giấy. Bấm ảnh để xem kích thước đầy đủ. Ảnh bộ cài hiển thị v27.3.1; bản phát hành này hợp nhất đóng gói, giữ nguyên mã driver và Utility.
+Ảnh người dùng cung cấp từ driver đã cài: bộ cài, sẵn sàng in, nhận diện mở nắp và cảnh báo hết giấy. Bấm ảnh để xem kích thước đầy đủ. Ảnh bộ cài hiển thị v27.3.1; v27.3.3 bổ sung sửa lỗi dịch vụ nền crash khi hủy job đang lỗi.
 
 ## Tính năng và kiểm chứng
 
@@ -23,11 +23,11 @@ Một bộ cài chứa tiếng Anh và tiếng Việt, tự chọn theo ngôn ng
 |---|---|
 | In USB | Đã kiểm trên LBP2900, Apple Silicon và macOS 27.2; sáu tờ in được người dùng xác nhận trong quá trình nghiệm thu driver. |
 | Trạng thái máy in | Đã kiểm sẵn sàng, hết giấy, mở nắp và rút/cắm lại USB. |
-| Điều khiển job | Pause, Resume và Cancel đã hoạt động trong Canon Printer Utility. |
+| Điều khiển job | Pause/Resume đã kiểm. v27.3.3 sửa lỗi Cancel mới tái hiện khi hết giấy; kiểm thử hồi quy đạt và người dùng đã xác nhận thử lại thành công với khay trống trên LBP2900/macOS 27.2. |
 | Print Center của macOS | Đã kiểm điều khiển queue và mở Printer Utility. |
 | Tùy chọn Canon | Các mục Finishing, Paper Source, Quality/Toner và About mở đúng. |
 | Runtime riêng | Hoạt động tách biệt với Canon gốc; cài lại Canon chính thức đã giữ driver riêng và in được một trang thực tế. |
-| Cài đè / nâng cấp | Có hỗ trợ giữ queue và thiết lập; kiểm thử payload tự động đạt. Cài đè bằng Installer trên máy thật còn chờ nghiệm thu. |
+| Cài đè / nâng cấp | Cài đè lên v27.3.3 trên máy thật giữ nguyên PPD của hai máy in và trạng thái máy in mặc định. Kiểm thử payload tự động đạt cho cài lại cùng bản và nâng cấp bản cũ. |
 
 **Phạm vi thử:** LBP2900 / Apple Silicon / macOS 27.2. Đây là bản thử nghiệm; phần cứng LBP2900B/Intel, máy Mac/macOS khác, phục hồi sau reboot/đăng nhập, Cleaning, mọi tùy chọn giấy/chất lượng và độ ổn định dài hạn còn cần kiểm chứng. Số phiên bản là phiên bản driver. Xem [bằng chứng kiểm thử](docs/verification.md).
 

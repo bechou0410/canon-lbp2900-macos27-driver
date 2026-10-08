@@ -32,4 +32,4 @@ The package now accepts an intact project-owned installation instead of uncondit
 
 Preinstall records queue pause states through IPP and the running private agents, pauses queues, rejects pending CUPS jobs and stops the private runtime. Postinstall verifies the new payload and restores the recorded state. Existing queue PPD/options, URI/default and unrelated printer files are untouched. A stuck private USB monitor can receive KILL only after its executable ownership is rechecked. Physical Canon jobs already handed off from CUPS must still be finished/cancelled in Utility before installation.
 
-Live v27.3.1 upgrade and same-version reinstallation: pending final package verification. No additional physical print is part of this change.
+The final v27.3.1 packages passed all 13 checks (55.124 seconds). Authenticated live upgrade and same-version installation remain unqualified: the optional authentication request was cancelled before installation started. No additional physical print is part of this change.

@@ -4,6 +4,14 @@
 
 Xem [README tiếng Anh](../README.md), [README tiếng Việt](../README.vi.md) và [phạm vi nghiệm thu](verification.md). Bộ cài có tài nguyên Anh/Việt, bản tự chọn theo ngôn ngữ macOS với dự phòng tiếng Anh, chỉ phát hành một PKG chung. Nội dung Canon gốc vẫn là tiếng Anh.
 
+## Chữ ký bản phát hành
+
+PKG v27.3.3 phát hành được ký bằng Developer ID Installer; các thành phần được ký bằng Developer ID Application. Apple đã chấp nhận notarization, ticket đã stapled và xác thực thành công. `spctl --assess --type install --verbose=4` trả về `accepted`, nguồn `Notarized Developer ID`. PKG cuối có checksum trong release GitHub; stapling làm checksum khác với file đã nộp Apple.
+
+## Ngôn ngữ và giao diện bộ cài
+
+Introduction, Read Me và nội dung Summary có đủ tiếng Anh/Việt, tự theo ngôn ngữ ưu tiên của macOS và dự phòng tiếng Anh. Giữ `.pkg` chuẩn theo lựa chọn người dùng: không thêm plugin hoặc menu ngôn ngữ tại Introduction. Thanh bước, nút điều hướng, xác thực và thông báo lỗi do macOS quản lý; dự án không thay bản dịch của hệ thống. Giấy phép Canon gốc được giữ nguyên tiếng Anh ở cả hai bộ tài nguyên. Summary dùng dấu ✓ để xác nhận driver đã cài, không khẳng định máy in đã kết nối hay sẵn sàng; có đường dẫn tới hướng dẫn nếu chưa thấy máy in.
+
 ## Phạm vi
 
 Một PKG tích hợp thành phần cần thiết từ Canon CAPT V10.0.10 English và patch LBP2900. Máy mới không cần cài toàn bộ driver Canon trước. Gói chỉ đăng ký một model LBP2900, dùng chung cho mục tiêu LBP2900/2900B; không mang PPD, monitor, recipe, ảnh trạng thái hoặc dữ liệu in hiệu chuẩn của các model khác. Bộ profile tương thích nội bộ vẫn mang tên LBP3000 vì đó là profile đã được kiểm chứng với bản 0.1.0.
@@ -41,6 +49,37 @@ python3 tests/standalone-test.py
 
 Kiểm thử dựng trang chạy filter thật, so sánh từng byte với nguồn Canon cho A4, Letter, ba trang, toner/media/halftone và hai bản sao. `DYLD_PRINT_LIBRARIES` xác nhận filter của driver nạp thư viện từ cây private, không nhờ runtime Canon đã cài trên máy. Kiểm thêm dependencies tuyệt đối và `@rpath` qua `@loader_path`, chữ ký cả hai kiến trúc, tài nguyên PPD, nội dung gói, cài chồng payload và gỡ trong root thử có dấu cách. Không gửi job, mở kết nối USB hoặc cài lên hệ thống trong bộ test.
 
+### Build bằng Developer ID
+
+Build mặc định ở trên vẫn ký ad-hoc. Để tạo ứng viên ký chính thức, cần hai identity có private key tương ứng trong Keychain: **Developer ID Application** cho code và **Developer ID Installer** cho PKG, cùng team. App Store Connect API key chỉ dùng để xác thực notarization; không thay thế hai identity này. Giữ mọi private key ngoài repository.
+
+```sh
+python3 tools/capt-standalone.py \
+  --application-identity 'Developer ID Application: NAME (TEAMID)' \
+  --installer-identity 'Developer ID Installer: NAME (TEAMID)' \
+  --output-directory artifacts/developer-id
+LBP2900_BUILD_DIR=artifacts/developer-id LBP2900_SIGNING_TEAM=TEAMID \
+  python3 tests/standalone-test.py
+```
+
+Thay `NAME` và `TEAMID` bằng identity thực tế trong Keychain; CLI cũng nhận SHA-1 của chứng chỉ. Cần truyền đủ cả hai identity. Thư mục riêng giữ nguyên bộ cài/candidate ad-hoc. Code được ký từ trong ra ngoài với hardened runtime và secure timestamp, giữ nguyên entitlements của Canon; helper mới không thêm entitlement. Manifest được tạo sau chữ ký cuối để cài đè và kiểm integrity vẫn đúng. Read Me Anh/Việt được điền trạng thái chữ ký theo chế độ build; bản ký không tự nhận đã notarize trước khi Apple duyệt. Bộ kiểm thử Developer ID xác minh team, loại chứng chỉ Application, timestamp, runtime và entitlements trên cả hai kiến trúc; đồng thời kiểm chữ ký Installer.
+
+Sau khi các kiểm thử đạt, dùng một profile `notarytool` đã lưu an toàn trong Keychain để nộp PKG. Theo [quy trình notarization của Apple](https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution), chỉ tiếp tục khi submission trả về **Accepted**; nếu **Invalid**, đọc log và sửa lỗi trước.
+
+```sh
+xcrun notarytool submit artifacts/developer-id/Canon-LBP2900-v27.3.3.pkg \
+  --keychain-profile canon-lbp2900-notary
+xcrun notarytool info SUBMISSION_ID --keychain-profile canon-lbp2900-notary
+xcrun notarytool log SUBMISSION_ID --keychain-profile canon-lbp2900-notary \
+  artifacts/developer-id/notarization-log.json
+# Chỉ chạy các bước dưới sau Accepted.
+xcrun stapler staple artifacts/developer-id/Canon-LBP2900-v27.3.3.pkg
+xcrun stapler validate artifacts/developer-id/Canon-LBP2900-v27.3.3.pkg
+spctl --assess --type install --verbose=4 artifacts/developer-id/Canon-LBP2900-v27.3.3.pkg
+```
+
+Stapling thay đổi PKG: tạo lại file `.sha256` từ PKG cuối, với tên file không kèm đường dẫn như build mặc định. Không sửa hay ký lại payload sau notarization. Kiểm cài đè, Utility và Cancel trên máy thật trước khi phát hành bản ký; chữ ký/notarization không thay thế kiểm thử driver. Các lệnh này chuẩn bị ứng viên cục bộ, không tự cập nhật release công khai.
+
 ## Cài và kết nối máy in
 
 Hoàn tất/hủy mọi job trước khi đổi driver. Có thể cài đè bản driver dự án còn nguyên vẹn, không cần gỡ trước. Bật đúng một LBP2900, cắm USB rồi cài PKG. Ở máy chưa cài, postinstall kiểm integrity và chạy `configure-connected`; khi tên queue chưa bị sử dụng, nó tạo `Canon_LBP2900` với kết nối `lb29u2://` và khởi động LaunchAgent cho desktop đang đăng nhập.
@@ -55,7 +94,7 @@ Tên hiển thị là **Canon LBP2900**. Không đổi máy in mặc định. Tr
 
 Với nhiều thiết bị, lấy URI cụ thể từ `lpinfo -v` rồi dùng lệnh `configure USB_URI`. Helper từ chối queue cùng tên không thuộc nó, job chưa xong hoặc monitor gốc còn giữ đúng USB. Hoàn tất mọi job và đăng xuất/đăng nhập lại nếu monitor cũ chưa dừng.
 
-Installer không tự in. Có thể cài đè runtime riêng còn nguyên vẹn theo quy trình ở cuối tài liệu. Chưa có Developer ID Installer/notarization; không cần thay đổi SIP/Gatekeeper trong quy trình đã kiểm.
+Installer v0.2.4 không tự in. Ở thời điểm kiểm thử bản đó, gói chưa có Developer ID Installer/notarization; không cần thay đổi SIP/Gatekeeper trong quy trình đã kiểm. PKG v27.3.3 hiện tại đã được ký và notarize như mô tả ở đầu tài liệu.
 
 ## Kiểm tra và gỡ
 
@@ -85,7 +124,7 @@ Helper từ chối file đã sửa, file lạ, queue còn dùng runtime hoặc t
 | Cài chung | Cài lại Canon V10.0.10 gốc thành công; runtime riêng và các queue được giữ, in tiếp được |
 | Vòng đời | Helper gỡ runtime/receipt/listener riêng trên hệ thống thật rồi cài lại thành công, giữ file Canon gốc và các queue khác/default. 0.2.2 bổ sung framework được kiểm gỡ trong root thử |
 
-LBP2900B, Intel, máy sạch chưa từng cài Canon, logout/reboot toàn máy, Cleaning, kẹt giấy, mọi tùy chọn trên giấy và chạy dài còn cần nghiệm thu riêng. Không cố tạo kẹt giấy. Lượt hiện tại đã dùng đúng 2/2 tờ được phép; lượt patch-only trước đó dùng 4 tờ riêng. Chưa có Developer ID/notarization, nhưng gói đã cài và chạy cục bộ mà không thay đổi SIP/Gatekeeper.
+LBP2900B, Intel, máy sạch chưa từng cài Canon, logout/reboot toàn máy, Cleaning, kẹt giấy, mọi tùy chọn trên giấy và chạy dài còn cần nghiệm thu riêng. Không cố tạo kẹt giấy. Lượt kiểm thử v0.2.x đã dùng đúng 2/2 tờ được phép; lượt patch-only trước đó dùng 4 tờ riêng. Những lượt kiểm tra đó dùng gói chưa ký Developer ID; PKG v27.3.3 đã ký và notarize, không cần thay đổi SIP/Gatekeeper.
 
 Chi tiết phiên thử và lỗi đã sửa: [phạm vi kiểm tra công khai](verification.md). Các log máy và serial chỉ nằm trong `artifacts/` bị Git bỏ qua.
 

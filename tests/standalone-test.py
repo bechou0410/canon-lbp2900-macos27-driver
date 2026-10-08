@@ -27,7 +27,8 @@ def load(name, path):
 standalone = load("standalone", PROJECT / "tools/capt-standalone.py")
 native = load("native_tests", PROJECT / "tests/native-patch-test.py")
 SOURCE = standalone.source.SOURCE / "expanded/Canon_CAPT.pkg/Payload"
-ROOT = standalone.source.ARTIFACTS / "standalone-candidate"
+BUILD = Path(os.environ.get("LBP2900_BUILD_DIR", standalone.source.ARTIFACTS)).resolve()
+ROOT = BUILD / "standalone-candidate"
 
 
 class StandaloneTest(unittest.TestCase):
@@ -162,6 +163,50 @@ class StandaloneTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "exactly one"):
             standalone.macho.relocate(bytes(single), patch)
 
+    def test_developer_id_signatures_and_preserved_entitlements(self):
+        team = os.environ.get("LBP2900_SIGNING_TEAM")
+        if not team:
+            self.skipTest("Set LBP2900_SIGNING_TEAM when validating a Developer ID build")
+        self.assertRegex(team, r"^[A-Z0-9]{10}$")
+        requirement = ('=anchor apple generic and certificate leaf[field.1.2.840.113635.100.6.1.13] exists '
+                       f'and certificate leaf[subject.OU] = "{team}"')
+        count = 0
+        for path in ROOT.rglob("*"):
+            if path.is_symlink() or not path.is_file():
+                continue
+            with path.open("rb") as stream:
+                if stream.read(4) != b"\xca\xfe\xba\xbe":
+                    continue
+            count += 1
+            result = native.run("codesign", "--verify", "--strict", "--all-architectures", "-R", requirement, path)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            entry = self.report["files"].get(str(path.relative_to(ROOT)))
+            for arch in ("arm64", "x86_64"):
+                metadata = native.run("codesign", "-d", "--arch", arch, "--verbose=4", path)
+                self.assertEqual(metadata.returncode, 0, metadata.stderr)
+                self.assertIn(f"TeamIdentifier={team}", metadata.stderr)
+                self.assertIn("Timestamp=", metadata.stderr)
+                self.assertRegex(metadata.stderr, r"flags=0x[0-9a-f]+\([^)]*runtime")
+                self.assertNotIn("Signature=adhoc", metadata.stderr)
+                actual = native.run("codesign", "-d", "--arch", arch, "--entitlements", ":-", path)
+                self.assertEqual(actual.returncode, 0, actual.stderr)
+                actual_entitlements = plistlib.loads(actual.stdout.encode()) if actual.stdout else {}
+                expected_entitlements = {}
+                if entry:
+                    original = native.run("codesign", "-d", "--arch", arch, "--entitlements", ":-", SOURCE / entry["source"])
+                    self.assertEqual(original.returncode, 0, original.stderr)
+                    if original.stdout:
+                        expected_entitlements = plistlib.loads(original.stdout.encode())
+                self.assertEqual(actual_entitlements, expected_entitlements, str(path))
+        self.assertEqual(count, 38)
+        for path in ROOT.rglob("*"):
+            if path.is_dir() and path.suffix in (".app", ".plugin", ".bundle", ".framework"):
+                result = native.run("codesign", "--verify", "--strict", "--all-architectures", "-R", requirement, path)
+                self.assertEqual(result.returncode, 0, result.stderr)
+        package = native.run("pkgutil", "--check-signature", BUILD / standalone.PACKAGE)
+        self.assertEqual(package.returncode, 0, package.stdout + package.stderr)
+        self.assertRegex(package.stdout, rf"Developer ID Installer: .+ \({team}\)")
+
     def test_dependencies_and_ppd_resources_resolve_inside_private_runtime(self):
         for relative, entry in self.report["files"].items():
             if "changes" not in entry:
@@ -213,15 +258,19 @@ class StandaloneTest(unittest.TestCase):
 
     def test_single_package_has_both_languages_and_original_license(self):
         expanded = self.work / "localized-package"
-        result = native.run("pkgutil", "--expand-full", standalone.source.ARTIFACTS / standalone.PACKAGE, expanded, timeout=45)
+        result = native.run("pkgutil", "--expand-full", BUILD / standalone.PACKAGE, expanded, timeout=45)
         self.assertEqual(result.returncode, 0, result.stderr)
         resources = expanded / "Resources"
         self.assertEqual(sorted(p.name for p in resources.glob("*.lproj")), ["en.lproj", "vi.lproj"])
+        signature = native.run("pkgutil", "--check-signature", BUILD / standalone.PACKAGE)
+        mode = "developer-id" if signature.returncode == 0 else "adhoc"
         for locale in ("en", "vi"):
             for page in ("Welcome", "ReadMe", "Conclusion"):
                 actual = resources / f"{locale}.lproj/{page}.html"
                 expected = PROJECT / f"package/installer-resources/{locale}.lproj/{page}.html"
-                self.assertEqual(actual.read_bytes(), expected.read_bytes())
+                expected_content = expected.read_text().replace("@@SIGNING_NOTICE@@", standalone.SIGNING_NOTICES[locale][mode])
+                self.assertEqual(actual.read_text(), expected_content)
+                self.assertNotIn("@@SIGNING_NOTICE@@", actual.read_text())
             self.assertEqual((resources / f"{locale}.lproj/License.rtf").read_bytes(),
                              (standalone.source.SOURCE / "LICENSE-CAPT-UK.rtf").read_bytes())
         for page in ("Welcome", "ReadMe", "Conclusion"):
@@ -239,7 +288,7 @@ class StandaloneTest(unittest.TestCase):
             ("toner", 1, 595.276, 841.89, "PageSize=A4 CNTonerSaving=True CNTonerDensity=1 CNHalftone=pattern2 MediaType=HEAVY"),
             ("copies", 1, 595.276, 841.89, "PageSize=A4 Collate=True com.apple.print.PrintSettings.PMCopies..n.=2"),
         )
-        output_dir = standalone.source.ARTIFACTS / "standalone-verification"
+        output_dir = BUILD / "standalone-verification"
         output_dir.mkdir(exist_ok=True)
         rendered = {}
         for name, pages, width, height, options in cases:

@@ -38,7 +38,7 @@ Một bộ cài chứa tiếng Anh và tiếng Việt, tự chọn theo ngôn ng
 3. Làm theo Installer và xác thực trên Mac. Khi cài mới, gói tự tạo **Canon LBP2900** cùng kết nối và dịch vụ trạng thái. Khi cài đè, queue của dự án, tùy chọn và máy in mặc định được giữ lại.
 4. Mở **System Settings → Printers & Scanners → Canon LBP2900 → Options & Supplies → Utility → Open Printer Utility**. Kiểm tra trạng thái **Ready to Print**.
 
-**Nếu macOS báo “Apple could not verify…”:** gói chưa có chữ ký Developer ID hoặc notarization. Sau khi đối chiếu checksum của bản tải về, làm theo [hướng dẫn Open Anyway của Apple](https://support.apple.com/en-au/102445) tại **System Settings → Privacy & Security**. Đây là ngoại lệ riêng cho gói; dự án không yêu cầu tắt SIP hoặc Gatekeeper.
+Bản phát hành này được ký bằng Developer ID Installer, Apple notarize và đã xác thực ticket stapled. Nếu macOS vẫn báo không thể xác minh bộ cài, hãy đối chiếu SHA-256 với checksum của bản phát hành rồi tải lại từ release chính thức. Nếu cảnh báo còn xuất hiện, đừng cài hoặc bỏ qua Gatekeeper; hãy gửi lại nội dung cảnh báo và phiên bản macOS.
 
 Nếu chưa cắm máy in lúc cài, kết nối USB rồi chạy:
 

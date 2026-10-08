@@ -38,7 +38,7 @@ Screenshots supplied by the user from the installed driver: the installer, Ready
 3. Follow Installer and authenticate on your Mac. On a fresh setup, the package creates **Canon LBP2900** with its native connection and status service. Existing project queues, options and the default printer are preserved on reinstall.
 4. Open **System Settings → Printers & Scanners → Canon LBP2900 → Options & Supplies → Utility → Open Printer Utility**. Check for **Ready to Print**.
 
-**If macOS says “Apple could not verify…”:** the package is not Developer ID signed or notarized. For a download you have checked against the release checksum, follow Apple's [Open Anyway instructions](https://support.apple.com/en-au/102445) in **System Settings → Privacy & Security**. This is a per-package exception; the project does not require disabling SIP or Gatekeeper.
+This release is signed with Developer ID Installer, notarized by Apple and carries a validated stapled ticket. If macOS still says it cannot verify the package, check its SHA-256 against the release checksum and download it again from the official release. If the warning remains, do not install or bypass Gatekeeper; report the exact warning and macOS version.
 
 If the printer was disconnected during installation, connect it and run:
 

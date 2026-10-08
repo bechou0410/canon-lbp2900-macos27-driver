@@ -33,6 +33,16 @@ BG = "BackGrounder/Canon 2900 BackGrounder.app"
 UTILITY = "StatusMonitor/StatusMonitor.app"
 VERSION = "27.3.3"
 PACKAGE = f"Canon-LBP2900-v{VERSION}.pkg"
+SIGNING_NOTICES = {
+    "en": {
+        "adhoc": "The package is ad-hoc signed, without Developer ID Installer/notarization.",
+        "developer-id": "This package is signed with Developer ID. See the release notes for its notarization status.",
+    },
+    "vi": {
+        "adhoc": "Gói ký ad-hoc, chưa có Developer ID Installer/notarization.",
+        "developer-id": "Gói được ký bằng Developer ID. Xem ghi chú phát hành để biết trạng thái notarization.",
+    },
+}
 BINARY_PATCHES = json.loads((PROJECT / "config/standalone-binary-patches.json").read_text())
 SHARED_DIRECTORIES = (
     "Libs/",
@@ -92,9 +102,11 @@ def destination(relative):
     return Path(name)
 
 
-def sign(path):
-    source.run("codesign", "--force", "--sign", "-", "--preserve-metadata=entitlements,flags,runtime", "--timestamp=none", path,
-               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+def sign(path, identity="-"):
+    options = ["--timestamp=none"] if identity == "-" else ["--options=runtime", "--timestamp"]
+    source.run("codesign", "--force", "--sign", identity,
+               "--preserve-metadata=entitlements,flags,runtime", *options, path,
+               stdout=subprocess.DEVNULL)
     source.run("codesign", "--verify", "--strict", "--all-architectures", path,
                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -114,7 +126,7 @@ def make_ppd(payload):
     return "".join(lines).replace("CUPSCAPT2", "LBP2900RT").replace("captmoncnab3", "lb29monitor").encode()
 
 
-def build_cancel_bridge(root):
+def build_cancel_bridge(root, identity="-"):
     directory = root / RUNTIME / "CCPD"
     common = ["xcrun", "clang", "-arch", "arm64", "-arch", "x86_64", "-mmacosx-version-min=11.0",
               "-O2", "-Wall", "-Wextra", "-Werror"]
@@ -124,10 +136,10 @@ def build_cancel_bridge(root):
     source.run(*common, "-Wno-deprecated-declarations", PROJECT / "native/cups-cancel-helper.c",
                "-lcups", "-o", directory / "lb29-cancel")
     for name in ("lb29.dylib", "lb29-cancel"):
-        sign(directory / name)
+        sign(directory / name, identity)
 
 
-def assemble(payload, root):
+def assemble(payload, root, identity="-"):
     source.validate_source(payload)
     root.mkdir(parents=True)
     report = {"version": VERSION, "source_dmg_sha256": source.CONFIG["sha256"], "files": {}}
@@ -147,7 +159,7 @@ def assemble(payload, root):
             data, changes = macho.relocate(data, BINARY_PATCHES.get(str(relative)), original.name == "captmoncnab3")
             target.write_bytes(data)
             entry["changes"] = changes
-            sign(target)
+            sign(target, identity)
         elif original.name == "Info.plist":
             info = plistlib.loads(data)
             for key, value in info.items():
@@ -161,11 +173,11 @@ def assemble(payload, root):
             target.write_bytes(plistlib.dumps(info))
         report["files"][str(target.relative_to(root))] = entry
 
-    build_cancel_bridge(root)
+    build_cancel_bridge(root, identity)
     # Resign bundles inside out after resource pruning and identifier relocation.
     bundles = [p for p in root.rglob("*") if p.suffix in (".app", ".plugin", ".bundle", ".framework") and p.is_dir()]
     for bundle in sorted(bundles, key=lambda p: len(p.parts), reverse=True):
-        sign(bundle)
+        sign(bundle, identity)
     (root / PPD).parent.mkdir(parents=True, exist_ok=True)
     (root / PPD).write_bytes(gzip.compress(make_ppd(payload), mtime=0))
     agent = plistlib.loads((payload / "Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist").read_bytes())
@@ -188,12 +200,16 @@ def assemble(payload, root):
     return report
 
 
-def build():
+def build(application_identity="-", installer_identity=None, output_directory=None):
+    if (application_identity != "-") != bool(installer_identity):
+        raise ValueError("Provide both Developer ID Application and Installer identities")
+    output_directory = Path(output_directory or source.ARTIFACTS).resolve()
+    output_directory.mkdir(parents=True, exist_ok=True)
     payload = source.prepare()
-    with tempfile.TemporaryDirectory(prefix="lbp2900-package-", dir=source.ARTIFACTS) as temporary:
+    with tempfile.TemporaryDirectory(prefix="lbp2900-package-", dir=output_directory) as temporary:
         scratch = Path(temporary)
         root = scratch / "root"
-        assemble(payload, root)
+        assemble(payload, root, application_identity)
         scripts = scratch / "scripts"
         scripts.mkdir()
         for name in ("preinstall", "postinstall", "lbp2900-standalone"):
@@ -218,6 +234,12 @@ def build():
         # shadow the localized resources, so keep pages only inside .lproj.
         for locale in ("en", "vi"):
             shutil.copytree(resource_source / f"{locale}.lproj", resources / f"{locale}.lproj")
+            readme = resources / f"{locale}.lproj/ReadMe.html"
+            content = readme.read_text()
+            if content.count("@@SIGNING_NOTICE@@") != 1:
+                raise ValueError(f"Missing or duplicated signing notice in {readme.name} ({locale})")
+            mode = "developer-id" if installer_identity else "adhoc"
+            readme.write_text(content.replace("@@SIGNING_NOTICE@@", SIGNING_NOTICES[locale][mode]))
         # Canon's agreement remains intact and in its original English in every locale.
         for directory in (resources, *resources.glob("*.lproj")):
             shutil.copy2(source.SOURCE / "LICENSE-CAPT-UK.rtf", directory / "License.rtf")
@@ -234,9 +256,12 @@ def build():
 <pkg-ref id="local.canon-lbp2900.capt10.standalone" version="{VERSION}">runtime.pkg</pkg-ref>
 </installer-gui-script>
 ''')
-        output = source.ARTIFACTS / PACKAGE
+        output = output_directory / PACKAGE
+        signing = ["--sign", installer_identity, "--timestamp"] if installer_identity else []
         source.run("productbuild", "--distribution", distribution, "--resources", resources,
-                   "--package-path", scratch, output)
+                   "--package-path", scratch, *signing, output)
+        if installer_identity:
+            source.run("pkgutil", "--check-signature", output)
         check = scratch / "expanded"
         source.run("pkgutil", "--expand-full", output, check)
         unpacked = check / "runtime.pkg/Payload"
@@ -245,7 +270,7 @@ def build():
         source.run("shasum", "-a", "256", "-c", unpacked / SUPPORT / "installed.sha256",
                    cwd=unpacked, stdout=subprocess.DEVNULL)
         # Keep this exact candidate for independent integration checks.
-        candidate = source.ARTIFACTS / "standalone-candidate"
+        candidate = output_directory / "standalone-candidate"
         if candidate.exists():
             shutil.rmtree(candidate)
         shutil.copytree(unpacked, candidate, symlinks=True)
@@ -255,8 +280,11 @@ def build():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.parse_args()
+    parser.add_argument("--application-identity", default="-", help="Developer ID Application identity (default: ad-hoc)")
+    parser.add_argument("--installer-identity", help="Developer ID Installer identity; required with Application identity")
+    parser.add_argument("--output-directory", type=Path, help="Package and candidate directory (default: artifacts)")
+    args = parser.parse_args()
     try:
-        build()
+        build(args.application_identity, args.installer_identity, args.output_directory)
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         parser.exit(1, f"LBP2900 driver: {exc}\n")

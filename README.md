@@ -1,86 +1,76 @@
-# Canon LBP2900 for macOS 27 — v27.3.1
+# Canon LBP2900 for macOS 27
 
 **English** · [Tiếng Việt](README.vi.md)
 
-A community driver for **Canon LBP2900 / LBP2900B over USB**, with Canon Printer Utility, macOS Print Center integration, and native Canon print options. Built from the verified Canon Printer Driver & Utilities for Mac V10.0.10, with an isolated runtime that registers only the 2900 profile.
+A complete USB driver package for **Canon LBP2900 / LBP2900B**, including Canon Printer Utility, macOS Print Center integration and native Canon print options. Install it directly—no separate Canon driver installation is required.
 
-**Experimental.** Hardware testing used an LBP2900, Apple Silicon and macOS **27.2**. `v27.3.1` is this project's release version. LBP2900B and Intel builds are included as targets but have not been qualified on their respective hardware.
+**[Download Canon LBP2900 v27.3.2](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.2/Canon-LBP2900-v27.3.2.pkg)** · [Release notes and checksum](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/tag/v27.3.2)
 
-## Download
+One installer contains English and Vietnamese content and follows macOS language preferences, with English as fallback. Canon Utility and native print dialogs remain in English.
 
-| Installer | Language |
+## Driver in action
+
+<table>
+<tr><th width="25%">Installer</th><th width="25%">Ready to Print</th><th width="25%">Top Cover Open</th><th width="25%">Out of Paper</th></tr>
+<tr><td><a href="docs/images/installer-preview.png"><img src="docs/images/installer-preview.png" alt="Installer" width="100%"></a></td><td><a href="docs/images/utility-ready.png"><img src="docs/images/utility-ready.png" alt="Ready to Print" width="100%"></a></td><td><a href="docs/images/utility-cover-open.png"><img src="docs/images/utility-cover-open.png" alt="Top Cover Open" width="100%"></a></td><td><a href="docs/images/utility-out-of-paper.png"><img src="docs/images/utility-out-of-paper.png" alt="Out of Paper" width="100%"></a></td></tr>
+</table>
+
+Screenshots supplied by the user from the installed driver: the installer, Ready to Print, top-cover detection and an out-of-paper alert. Click an image to view it at full size. The installer screenshot shows v27.3.1; this release consolidates packaging while preserving the same driver and Utility code.
+
+## Features and verification
+
+| Feature | Status |
 |---|---|
-| [Canon-LBP2900-v27.3.1.pkg](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.1/Canon-LBP2900-v27.3.1.pkg) | Automatic macOS language selection; English fallback |
-| [Canon-LBP2900-v27.3.1-en.pkg](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.1/Canon-LBP2900-v27.3.1-en.pkg) | English |
-| [Canon-LBP2900-v27.3.1-vi.pkg](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/download/v27.3.1/Canon-LBP2900-v27.3.1-vi.pkg) | Tiếng Việt |
+| USB printing | Verified on LBP2900, Apple Silicon and macOS 27.2; six user-confirmed sheets during driver validation. |
+| Printer status | Ready, out of paper, cover open and USB disconnect/reconnect verified. |
+| Job controls | Pause, Resume and Cancel verified in Canon Printer Utility. |
+| macOS Print Center | Queue controls and opening Printer Utility verified. |
+| Canon print options | Finishing, Paper Source, Quality/Toner and About dialogs load correctly. |
+| Dedicated driver runtime | Separate from the original Canon driver; an official Canon reinstall preserved the private driver and a real print. |
+| Reinstall / upgrade | Built-in support preserves queues and settings; automated payload tests pass. Live Installer upgrade qualification remains open. |
 
-[Release notes and SHA-256 checksums](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases/tag/v27.3.1). All language variants install the same driver payload. Canon's native Utility and print dialogs remain in English; the installer introduction, instructions and conclusion are localized. macOS supplies Installer's navigation buttons. Use the separate language packages for an explicit choice; the native welcome page has no custom language tabs.
-
-![English installer introduction](docs/images/installer-en.png)
-
-Installer language preview from v27.3; v27.3.1 adds reinstall support.
+**Test scope:** LBP2900 / Apple Silicon / macOS 27.2. The package is experimental; LBP2900B and Intel hardware, other Macs/macOS versions, reboot/login recovery, Cleaning, every physical media/quality option and endurance still need qualification. The release number is the driver version. See [verification evidence](docs/verification.md).
 
 ## Install
 
-1. Finish or cancel all Canon jobs. Install directly over an earlier project driver; no uninstall is required.
-2. Connect **one powered-on LBP2900 by USB** and open the PKG. Review Canon's included license and authenticate on your Mac.
-3. v27.3.1 checks the connected printer and creates **Canon LBP2900** with the required native transport when the queue name is available. It starts the printer status service for the signed-in desktop. Existing queues and the default printer are preserved.
-4. Open **System Settings → Printers & Scanners → Canon LBP2900 → Options & Supplies → Utility → Open Printer Utility**. The Utility should show **Ready to Print**.
+1. Finish or cancel all jobs in Canon Printer Utility.
+2. Connect one powered-on LBP2900 by USB and open the PKG. You can install over an intact project driver without uninstalling it.
+3. Follow Installer and authenticate on your Mac. On a fresh setup, the package creates **Canon LBP2900** with its native connection and status service. Existing project queues, options and the default printer are preserved on reinstall.
+4. Open **System Settings → Printers & Scanners → Canon LBP2900 → Options & Supplies → Utility → Open Printer Utility**. Check for **Ready to Print**.
 
-If the printer was disconnected, connect it and run:
+**If macOS says “Apple could not verify…”:** the package is not Developer ID signed or notarized. For a download you have checked against the release checksum, follow Apple's [Open Anyway instructions](https://support.apple.com/en-au/102445) in **System Settings → Privacy & Security**. This is a per-package exception; the project does not require disabling SIP or Gatekeeper.
+
+If the printer was disconnected during installation, connect it and run:
 
 ```sh
 sudo '/Library/Application Support/CanonLBP2900Standalone/lbp2900-standalone' configure-connected
 ```
 
-If `Canon_LBP2900` already exists, automatic setup preserves it for review. Finish its jobs and remove only that printer queue before retrying the command. Multiple attached devices also require manual selection. Adding a direct USB queue through macOS alone does not establish the native status connection; use the setup command above.
+A pre-existing queue created manually in macOS is preserved for review; adding a direct USB queue alone does not establish the native status connection. Finish its jobs and remove only that conflicting Canon queue before retrying setup. Multiple attached printers require manual selection. See [setup and recovery](docs/standalone-capt.md).
 
-![Canon Printer Utility ready](docs/images/utility-ready.png)
+## Reinstall or remove
 
-Actual v27.3 Utility after installation on the test Mac; native machine code remains unchanged from 0.2.4.
+To reinstall or upgrade, open the new PKG directly after finishing all Canon jobs. Modified or unrecognized files are refused. If installation is interrupted, rerun the PKG; recovery proceeds only when installed integrity passes.
 
-The PKG has no Developer ID Installer signature or Apple notarization. Changed components are signed ad-hoc. Testing did not disable SIP or Gatekeeper. For maintenance and recovery details, see [setup and architecture](docs/standalone-capt.md).
-
-## What has been fixed and verified
-
-| Feature / fix | Evidence and limits |
-|---|---|
-| USB printing on Apple Silicon / macOS 27.2 | Six user-confirmed sheets across the native-driver development sequence: four with patch-only 0.1.0, two before/after the official Canon reinstall with 0.2.1/0.2.2. v27.3.1 retains their native processing behavior. |
-| Printer Utility status and job controls | Ready, out of paper, top cover open, USB loss/reconnect, Pause, Resume and Cancel observed on the real printer. |
-| macOS Print Center | Queue pause/resume/remove and opening the private Utility verified. After handoff to Canon's service, use Canon Utility for the physical job. |
-| Native Canon print options | Restored the missing CAPTUIKit framework; Finishing, Paper Source, Quality/Toner and About dialogs loaded through Preview from the private runtime. Physical output of every option is not qualified. |
-| Extra original Utility opening and crashing | Separated the native error-notification channel; two real notifications opened only one private Utility while both driver services ran, with no new original-app crash. |
-| USB monitor surviving queue removal | Lifecycle checks identify the loaded executable even when its process name is short; guarded removal waits for owned processes. |
-| Utility crash after a manual USB queue | Reproduced on 0.2.4 and corrected by establishing the native transport/service. v27.3 added connected-printer setup after installation; conflicting queues are preserved for review. Automatic setup passed a live v27.3 installation on the test Mac. |
-| Later official Canon V10.0.10 installation | Private hashes, queue, Utility and an actual print survived an official reinstall on 0.2.2. Other Canon model hardware was unavailable. |
-| Reinstall / upgrade | v27.3.1 supports installation over an intact project driver, preserving existing printer settings. See the current [verification scope](docs/verification.md). |
-| Reproducible packaging and languages | Automated render, signature, dependency, ownership, lifecycle, isolation and bilingual-resource checks. See [verification scope](docs/verification.md). |
-
-**Still unqualified:** LBP2900B hardware, Intel hardware, other Macs/macOS 27 point releases, reboot/login recovery, Cleaning, every physical media/quality option, other Canon printer operation and long-running reliability. LBP2900 has no color printing or automatic duplex hardware. This release does not claim those capabilities.
-
-## Remove or reinstall
-
-For removal only: finish/cancel all jobs in Canon Printer Utility, then remove this driver's queue in Printers & Scanners. Earlier versions may name it `Canon_LBP2900_Standalone`; v27.3.1 uses `Canon_LBP2900`. Then run:
+To uninstall, finish/cancel all Canon jobs and remove this driver's queue in Printers & Scanners, then run:
 
 ```sh
 sudo '/Library/Application Support/CanonLBP2900Standalone/lbp2900-standalone' remove
 ```
 
-The helper verifies ownership and installed file hashes before removing the private runtime, backend, PPD, service and receipt. Original Canon drivers and unrelated printers are preserved. User preferences/cache are retained. To reinstall or upgrade an intact project driver, open the new PKG directly. It preserves existing queues, PPD options, the default printer and prior queue pause state. Finish or cancel jobs in Canon Utility first. Modified or unrecognized files are refused rather than overwritten. If an installation is interrupted, rerun the PKG; it resumes only after installed integrity passes.
+The helper removes the project-owned runtime and receipt. Original Canon drivers, unrelated printers and user preferences remain.
 
-## Build from source
+## Build
 
 On macOS with Python 3.11+ and Apple's command-line tools:
 
 ```sh
-python3 tools/capt-standalone.py --language all
+python3 tools/capt-standalone.py
 python3 tests/standalone-test.py
 ```
 
-The builder downloads the pinned official input over HTTPS, validates its checksum, Canon installer signature and notarization, then selects, relocates, signs and packages the required components. Outputs and checksums are under `artifacts/`, which is excluded from Git. Tests render real documents offline and never register a printer or print a page.
+The builder verifies the official Canon input, packages the required components and writes one bilingual PKG plus its SHA-256 file under `artifacts/`. Tests use real payloads and render documents without printing. [Build and architecture details](docs/standalone-capt.md).
 
-The private runtime, backend, ports, process names and notification channel keep the 2900 driver separate from the original Canon installation. Internal support paths retain their earlier names for compatibility. [Technical details](docs/standalone-capt.md) · [Historical patch-only route](docs/native-capt-setup.md)
+## Credits
 
-## Credits and notices
-
-Canon owns the original driver, utilities and resources. This project is independent and is not endorsed or certified by Canon or Apple. The original Canon license is included in the installer. See [NOTICE.md](NOTICE.md) and the [official Canon source](https://vn.canon/en/support/0101321320). Historical releases based on `rastertocapt` are superseded by this native-driver route.
+Based on Canon Printer Driver & Utilities for Mac V10.0.10. Canon owns the original code and resources; the original license is included. This community project is independent and is not endorsed or certified by Canon or Apple. [Notices](NOTICE.md) · [Official Canon source](https://vn.canon/en/support/0101321320) · [Previous releases](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases).

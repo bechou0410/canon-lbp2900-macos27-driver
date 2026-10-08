@@ -170,35 +170,25 @@ class StandaloneTest(unittest.TestCase):
         self.assertEqual(failures, ["**FAIL**  Bad option Resolution choice 600"], result.stdout + result.stderr)
         self.assertEqual(result.returncode, 4)
 
-    def test_release_language_variants_share_the_same_driver_payload(self):
-        manifests = []
-        for language in ("auto", "en", "vi"):
-            filename = standalone.PACKAGE if language == "auto" else standalone.PACKAGE.replace(".pkg", f"-{language}.pkg")
-            expanded = self.work / f"localized-{language}"
-            result = native.run("pkgutil", "--expand-full", standalone.source.ARTIFACTS / filename, expanded, timeout=45)
-            self.assertEqual(result.returncode, 0, result.stderr)
-            resources = expanded / "Resources"
-            locales = ("en", "vi") if language == "auto" else (language,)
-            self.assertEqual(sorted(p.name for p in resources.glob("*.lproj")), sorted(f"{locale}.lproj" for locale in locales))
-            for locale in locales:
-                for page in ("Welcome", "ReadMe", "Conclusion"):
-                    actual = resources / f"{locale}.lproj/{page}.html"
-                    expected = PROJECT / f"package/installer-resources/{locale}.lproj/{page}.html"
-                    self.assertEqual(actual.read_bytes(), expected.read_bytes())
-                self.assertEqual((resources / f"{locale}.lproj/License.rtf").read_bytes(),
-                                 (standalone.source.SOURCE / "LICENSE-CAPT-UK.rtf").read_bytes())
-            fallback = "vi" if language == "vi" else "en"
-            if language == "auto":
-                for page in ("Welcome", "ReadMe", "Conclusion"):
-                    self.assertFalse((resources / f"{page}.html").exists(), "Global pages override automatic localization")
-            else:
-                self.assertEqual((resources / "Welcome.html").read_bytes(),
-                                 (resources / f"{fallback}.lproj/Welcome.html").read_bytes())
-            distribution = (expanded / "Distribution").read_text()
-            self.assertIn(f"<title>Canon LBP2900 v{standalone.VERSION}</title>", distribution)
-            manifests.append((expanded / "runtime.pkg/Payload" / standalone.SUPPORT / "installed.sha256").read_bytes())
-        self.assertEqual(manifests[0], manifests[1])
-        self.assertEqual(manifests[1], manifests[2])
+    def test_single_package_has_both_languages_and_original_license(self):
+        expanded = self.work / "localized-package"
+        result = native.run("pkgutil", "--expand-full", standalone.source.ARTIFACTS / standalone.PACKAGE, expanded, timeout=45)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        resources = expanded / "Resources"
+        self.assertEqual(sorted(p.name for p in resources.glob("*.lproj")), ["en.lproj", "vi.lproj"])
+        for locale in ("en", "vi"):
+            for page in ("Welcome", "ReadMe", "Conclusion"):
+                actual = resources / f"{locale}.lproj/{page}.html"
+                expected = PROJECT / f"package/installer-resources/{locale}.lproj/{page}.html"
+                self.assertEqual(actual.read_bytes(), expected.read_bytes())
+            self.assertEqual((resources / f"{locale}.lproj/License.rtf").read_bytes(),
+                             (standalone.source.SOURCE / "LICENSE-CAPT-UK.rtf").read_bytes())
+        for page in ("Welcome", "ReadMe", "Conclusion"):
+            self.assertFalse((resources / f"{page}.html").exists(), "Global pages override automatic localization")
+        distribution = (expanded / "Distribution").read_text()
+        self.assertIn(f"<title>Canon LBP2900 v{standalone.VERSION}</title>", distribution)
+        self.assertEqual((expanded / "runtime.pkg/Payload" / standalone.SUPPORT / "installed.sha256").read_bytes(),
+                         (ROOT / standalone.SUPPORT / "installed.sha256").read_bytes())
 
     def test_render_matches_original_without_loading_official_runtime(self):
         cases = (

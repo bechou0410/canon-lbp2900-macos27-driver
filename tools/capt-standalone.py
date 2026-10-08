@@ -31,7 +31,7 @@ BACKEND = Path("usr/libexec/cups/backend/lb29u2")
 AGENT = Path("Library/LaunchAgents/jp.co.canon.LBP2900RT.BG.plist")
 BG = "BackGrounder/Canon 2900 BackGrounder.app"
 UTILITY = "StatusMonitor/StatusMonitor.app"
-VERSION = "27.3.1"
+VERSION = "27.3.2"
 PACKAGE = f"Canon-LBP2900-v{VERSION}.pkg"
 BINARY_PATCHES = json.loads((PROJECT / "config/standalone-binary-patches.json").read_text())
 SHARED_DIRECTORIES = (
@@ -174,7 +174,7 @@ def assemble(payload, root):
     return report
 
 
-def build(language="auto"):
+def build():
     payload = source.prepare()
     with tempfile.TemporaryDirectory(prefix="lbp2900-package-", dir=source.ARTIFACTS) as temporary:
         scratch = Path(temporary)
@@ -199,15 +199,12 @@ def build(language="auto"):
                    "--ownership", "recommended", "--install-location", "/", component)
         resources = scratch / "resources"
         resource_source = PROJECT / "package/installer-resources"
-        fallback = "vi" if language == "vi" else "en"
         resources.mkdir()
-        # Global resources override localized ones in Apple's bundle lookup.
-        # Only the explicit-language packages carry global page copies.
-        if language != "auto":
-            shutil.copytree(resource_source / f"{fallback}.lproj", resources, dirs_exist_ok=True)
-        for locale in (("en", "vi") if language == "auto" else (language,)):
+        # One package follows macOS language preferences. Global HTML would
+        # shadow the localized resources, so keep pages only inside .lproj.
+        for locale in ("en", "vi"):
             shutil.copytree(resource_source / f"{locale}.lproj", resources / f"{locale}.lproj")
-        # Canon's agreement remains intact and in its original English in every variant.
+        # Canon's agreement remains intact and in its original English in every locale.
         for directory in (resources, *resources.glob("*.lproj")):
             shutil.copy2(source.SOURCE / "LICENSE-CAPT-UK.rtf", directory / "License.rtf")
         distribution = scratch / "Distribution.xml"
@@ -223,7 +220,7 @@ def build(language="auto"):
 <pkg-ref id="local.canon-lbp2900.capt10.standalone" version="{VERSION}">runtime.pkg</pkg-ref>
 </installer-gui-script>
 ''')
-        output = source.ARTIFACTS / (PACKAGE if language == "auto" else PACKAGE.replace(".pkg", f"-{language}.pkg"))
+        output = source.ARTIFACTS / PACKAGE
         source.run("productbuild", "--distribution", distribution, "--resources", resources,
                    "--package-path", scratch, output)
         check = scratch / "expanded"
@@ -244,11 +241,8 @@ def build(language="auto"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--language", choices=("auto", "en", "vi", "all"), default="auto",
-                        help="Installer resources: macOS language selection, English, Vietnamese, or all three packages")
-    args = parser.parse_args()
+    parser.parse_args()
     try:
-        for language in (("auto", "en", "vi") if args.language == "all" else (args.language,)):
-            build(language)
+        build()
     except (OSError, ValueError, subprocess.CalledProcessError) as exc:
         parser.exit(1, f"LBP2900 driver: {exc}\n")

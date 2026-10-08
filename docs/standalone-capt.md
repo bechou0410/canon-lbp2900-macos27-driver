@@ -1,8 +1,8 @@
-# Canon LBP2900 v27.3.1 — technical guide
+# Canon LBP2900 v27.3.2 — technical guide
 
-**Bản hiện tại: Canon LBP2900 v27.3.1**, dành cho mục tiêu LBP2900/2900B. Tên bộ cài và máy in bỏ “CAPT” và “Standalone”; tên công cụ, receipt và runtime nội bộ giữ nguyên để tương thích. v27.3.1 là phiên bản project; máy thử chạy macOS 27.2.
+**Bản hiện tại: Canon LBP2900 v27.3.2**, dành cho mục tiêu LBP2900/2900B. Tên bộ cài và máy in bỏ “CAPT” và “Standalone”; tên công cụ, receipt và runtime nội bộ giữ nguyên để tương thích. v27.3.2 là phiên bản project; máy thử chạy macOS 27.2.
 
-Xem [README tiếng Anh](../README.md), [README tiếng Việt](../README.vi.md) và [phạm vi nghiệm thu](verification.md). Bộ cài có tài nguyên Anh/Việt, bản tự chọn theo ngôn ngữ macOS với dự phòng tiếng Anh, cùng hai gói ngôn ngữ riêng. Nội dung Canon gốc vẫn là tiếng Anh.
+Xem [README tiếng Anh](../README.md), [README tiếng Việt](../README.vi.md) và [phạm vi nghiệm thu](verification.md). Bộ cài có tài nguyên Anh/Việt, bản tự chọn theo ngôn ngữ macOS với dự phòng tiếng Anh, chỉ phát hành một PKG chung. Nội dung Canon gốc vẫn là tiếng Anh.
 
 ## Phạm vi
 
@@ -31,11 +31,11 @@ Build đổi đồng bộ đường dẫn, namespace IPC/cache/bundle và 26 h�
 ## Build và kiểm thử
 
 ```sh
-python3 tools/capt-standalone.py --language all
+python3 tools/capt-standalone.py
 python3 tests/standalone-test.py
 ```
 
-Đầu ra: `artifacts/Canon-LBP2900-v27.3.1.pkg`, `-en.pkg`, `-vi.pkg` và file `.sha256` cùng tên. Build xác minh lại DMG gốc, chữ ký installer Canon và notarization; giải nén mới, chọn payload, patch/ký, đóng gói rồi giải nén PKG để kiểm checksum. Gói cục bộ chứa thành phần bản quyền Canon và kèm license gốc trong màn hình Installer. Payload Canon không đưa vào Git; archive bộ cài phát hành giữ license và thông báo bản quyền gốc.
+Đầu ra: `artifacts/Canon-LBP2900-v27.3.2.pkg` và file `.sha256` cùng tên. Build xác minh lại DMG gốc, chữ ký installer Canon và notarization; giải nén mới, chọn payload, patch/ký, đóng gói rồi giải nén PKG để kiểm checksum. Gói cục bộ chứa thành phần bản quyền Canon và kèm license gốc trong màn hình Installer. Payload Canon không đưa vào Git; archive bộ cài phát hành giữ license và thông báo bản quyền gốc.
 
 `config/standalone-binary-patches.json` là nguồn của các vị trí/hằng số được sửa. `tools/capt-standalone.py:selected()` sở hữu danh sách thành phần giữ lại. `relocation.json`, `installed.sha256`, `installed-paths.txt` được sinh trong payload để truy vết và kiểm tra file; không chỉnh thủ công.
 

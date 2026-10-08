@@ -1,12 +1,12 @@
-# Verification scope — v27.3.1
+# Verification scope — v27.3.2
 
 English is the default repository documentation. See [Vietnamese README](../README.vi.md) for the same user-facing feature matrix.
 
 ## Current package
 
-v27.3.1 is the project release number, not an assertion that macOS 27.3 was tested. The hardware host runs macOS 27.2 on Apple Silicon with an LBP2900. LBP2900B and x86_64 are build targets; their hardware qualification remains open.
+v27.3.2 is the project release number, not an assertion that macOS 27.3 was tested. The hardware host runs macOS 27.2 on Apple Silicon with an LBP2900. LBP2900B and x86_64 are build targets; their hardware qualification remains open.
 
-Thirteen checks cover the real Canon-derived payload: curated model/resource selection; exact input hash, architecture and patch preimage guards; both-slice signatures; dependency and rpath closure; actual render equivalence in five cases; separate notification endpoints; both official/private payload overlay orders; guarded lifecycle/removal; real OS process ownership with a short monitor name; real CUPS queue-presence detection; all three installer language variants carrying the same payload and unchanged Canon license; same-version/historical-payload upgrades with interrupted preparation; and live read-only IPP state queries.
+Thirteen checks cover the real Canon-derived payload: curated model/resource selection; exact input hash, architecture and patch preimage guards; both-slice signatures; dependency and rpath closure; actual render equivalence in five cases; separate notification endpoints; both official/private payload overlay orders; guarded lifecycle/removal; real OS process ownership with a short monitor name; real CUPS queue-presence detection; one installer carrying both localized resource sets and the unchanged Canon license; same-version/historical-payload upgrades with interrupted preparation; and live read-only IPP state queries.
 
 Native machine code is unchanged from 0.2.4. The Utility's display-name metadata and corresponding signature change. Post-install setup now discovers exactly one connected USB LBP2900, refuses ambiguous or foreign existing queues, and invokes the existing checked configure path. No test submits a print job. The final v27.3 package was installed on the hardware host: post-install USB discovery created the native queue, bootstrapped its desktop service and opened the Utility. The verification restored the prior queue defaults/default printer and confirmed the unrelated Epson queue/PPD was unchanged. No print job was submitted. A macOS behavior discovered during this check—successful `lpstat` exit with no matching queue output—was corrected by checking actual queue output; queue/URI checks also avoid translated status prefixes.
 
@@ -18,13 +18,13 @@ The 0.2.4 manual-install failure used a direct USB queue without the native tran
 
 ## Installer languages
 
-The automatic package carries `en.lproj` and `vi.lproj` plus an English fallback. Separate `-en.pkg` and `-vi.pkg` variants provide explicit language choice. Welcome, Read Me and Conclusion content are localized; native navigation follows macOS, Canon dialogs stay English and the Canon agreement stays in its original English. The welcome view is a static native text view, so no custom language tabs are claimed.
+The automatic package carries `en.lproj` and `vi.lproj` plus an English fallback. Only one automatic bilingual PKG is built and published for v27.3.2; the older releases remain in GitHub history. Welcome, Read Me and Conclusion content are localized; native navigation follows macOS, Canon dialogs stay English and the Canon agreement stays in its original English. The welcome view is a static native text view, so no custom language tabs are claimed.
 
 The resource layout follows the local `productbuild(1)` documentation for `.lproj` resources and Apple's [distribution XML reference](https://developer.apple.com/library/archive/documentation/DeveloperTools/Reference/DistributionDefinitionRef/Chapters/Distribution_XML_Ref.html).
 
 ## Remaining qualification
 
-LBP2900B/Intel hardware, other Macs and macOS 27 point releases, logout/reboot, Cleaning, all physical media/quality choices, other Canon printer hardware and endurance remain unqualified. Screenshots show actual Installer/Utility windows; machine identifiers and document titles are excluded. No additional sheets are used for v27.3.
+LBP2900B/Intel hardware, other Macs and macOS 27 point releases, logout/reboot, Cleaning, all physical media/quality choices, other Canon printer hardware and endurance remain unqualified. Screenshots show actual Installer/Utility windows. The current user-supplied images are published unchanged at the user’s explicit request. No additional sheets are used for v27.3.
 
 ## Reinstallation in v27.3.1
 
@@ -33,3 +33,9 @@ The package now accepts an intact project-owned installation instead of uncondit
 Preinstall records queue pause states through IPP and the running private agents, pauses queues, rejects pending CUPS jobs and stops the private runtime. Postinstall verifies the new payload and restores the recorded state. Existing queue PPD/options, URI/default and unrelated printer files are untouched. A stuck private USB monitor can receive KILL only after its executable ownership is rechecked. Physical Canon jobs already handed off from CUPS must still be finished/cancelled in Utility before installation.
 
 The final v27.3.1 packages passed all 13 checks (55.124 seconds). Authenticated live upgrade and same-version installation remain unqualified: the optional authentication request was cancelled before installation started. No additional physical print is part of this change.
+
+## Current packaging and screenshots
+
+v27.3.2 removes the separate language artifacts and their build switches. Driver lifecycle and native code are unchanged. The user supplied screenshots of the v27.3.1 installer and Utility showing Ready to Print, Top Cover Open and Out of Paper. They demonstrate the displayed states; they do not by themselves establish new physical printing or a successful in-place upgrade. The README presents these images together while retaining the detailed validation limits here.
+
+The final v27.3.2 package passed all 13 checks in 71.838 seconds. This packaging update did not install a driver or submit a print job on the host.

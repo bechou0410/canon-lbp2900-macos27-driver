@@ -11,6 +11,7 @@ SUPPORT='/Library/Application Support/CanonLBP2900Standalone'
 PPD=/Library/Printers/PPDs/Contents/Resources/LocalLBP2900CAPT.ppd.gz
 AGENT=/Library/LaunchAgents/jp.co.canon.LBP2900RT.BG.plist
 LABEL=jp.co.canon.LBP2900RT.BackGrounder
+STATE='/Library/Application Support/CanonLBP2900InstallState'
 QUEUE=Canon_LBP2900
 fail() { echo "LBP2900 driver: $*" >&2; exit 1; }
 queue_exists() {
@@ -49,12 +50,144 @@ check_owned_paths() {
 }
 root_required() { [ "$(id -u)" -eq 0 ] || fail 'Run this command with sudo.'; }
 private_pids() {
-    # CCPD execs the USB monitor with a bare argv[0], so ps paths alone miss it.
+    # Do not select apps such as Preview merely because they load our PDE libraries.
     {
         ps -axo pid=,command= | awk -v base="$root$RUNTIME/" '
-            {pid=$1; $1=""; sub(/^ +/, ""); if (index($0, base)==1) print pid}'
-        lsof -nP -a -d txt -t "$root$RUNTIME/Bidi/lb29monitor" 2>/dev/null || :
+            {pid=$1; $1=""; sub(/^ +/, ""); if (index($0,base)==1) print pid}'
+        # Older releases use other monitor names; all reside directly in Bidi.
+        for executable in "$root$RUNTIME/Bidi/"*; do
+            if [ -f "$executable" ] && [ -x "$executable" ]; then
+                lsof -nP -a -d txt -t "$executable" 2>/dev/null || :
+            fi
+        done
     } | sort -nu
+}
+stop_private() {
+    for uid in $(ps -axo uid= | sort -nu); do
+        if launchctl print "gui/$uid/$LABEL" >/dev/null 2>&1; then
+            launchctl bootout "gui/$uid/$LABEL"
+        fi
+    done
+    pids=$(private_pids)
+    for pid in $pids; do kill -TERM "$pid" 2>/dev/null || :; done
+    attempts=0
+    while [ -n "$(private_pids)" ] && [ "$attempts" -lt 15 ]; do
+        sleep 1
+        attempts=$((attempts + 1))
+    done
+    # A retired idle USB monitor may ignore TERM. Recheck ownership before KILL.
+    for pid in $(private_pids); do
+        kill -KILL "$pid" 2>/dev/null || :
+    done
+    attempts=0
+    while [ -n "$(private_pids)" ] && [ "$attempts" -lt 3 ]; do
+        sleep 1
+        attempts=$((attempts + 1))
+    done
+    [ -z "$(private_pids)" ] || fail 'Private processes could not be stopped.'
+}
+has_installation() {
+    [ -e "$root$RUNTIME" ] || [ -L "$root$RUNTIME" ] ||
+        [ -e "$root$SUPPORT" ] || [ -L "$root$SUPPORT" ] ||
+        [ -e "$root$PPD" ] || [ -L "$root$PPD" ] ||
+        [ -e "$root/usr/libexec/cups/backend/lb29u2" ] ||
+        [ -L "$root/usr/libexec/cups/backend/lb29u2" ] ||
+        [ -e "$root$AGENT" ] || [ -L "$root$AGENT" ]
+}
+validate_old_paths() {
+    while IFS= read -r path; do
+        case "$path" in /*|*'/../'*|*'/./'*|../*|*/..) fail 'Invalid owned path.';; esac
+        case "/$path" in "$RUNTIME/"*|"$SUPPORT/"*|"$PPD"|"$AGENT"|/usr/libexec/cups/backend/lb29u2) ;;
+            *) fail 'Unexpected owned path.';; esac
+    done < "$root$SUPPORT/installed-paths.txt"
+}
+resume_installation() {
+    [ -d "$root$STATE" ] && [ ! -L "$root$STATE" ] || fail 'Invalid install state.'
+    if [ -z "$root" ]; then
+        while IFS= read -r uid; do
+            if launchctl print "gui/$uid" >/dev/null 2>&1 && ! launchctl print "gui/$uid/$LABEL" >/dev/null 2>&1; then
+                launchctl bootstrap "gui/$uid" "$AGENT"
+            fi
+        done < "$STATE/agents"
+        while read -r queue state; do
+            [ "$state" = Stopped ] || cupsenable "$queue"
+        done < "$STATE/queues"
+    fi
+    rm -R "$root$STATE"
+}
+private_queues() {
+    listing=$(lpstat -v) || fail 'Cannot list printer queues.'
+    printf '%s\n' "$listing" | awk '$NF ~ /^lb29u2:\/\// {queue=$(NF-1); sub(/:$/, "", queue); print queue}'
+}
+queue_state() {
+    # IPP enums are stable across languages and reflect current scheduler state.
+    attributes=$(ipptool -tv "ipp://localhost/printers/$1" /usr/share/cups/ipptool/get-printer-attributes.test) || fail 'Cannot read queue state.'
+    state=$(printf '%s\n' "$attributes" | awk '$1=="printer-state" && $2=="(enum)" {print $4}')
+    case "$state" in idle|processing) echo Idle;; stopped) echo Stopped;; *) fail 'Unknown queue state.';; esac
+}
+prepare_installation() {
+    # Retry after a failed transaction only when installed files still validate.
+    if [ -e "$root$STATE" ] || [ -L "$root$STATE" ]; then
+        complete_installation recover
+    fi
+    if ! has_installation; then
+        if [ -z "$root" ] && lsof -nP -iTCP:59290 -iTCP:59390 -sTCP:LISTEN >/dev/null 2>&1; then
+            fail 'Ports 59290/59390 are already in use.'
+        fi
+        return
+    fi
+    check
+    check_owned_paths
+    validate_old_paths
+    umask 077
+    mkdir "$root$STATE"
+    cp "$root$SUPPORT/installed-paths.txt" "$root$STATE/old-paths"
+    : > "$root$STATE/queues"
+    : > "$root$STATE/agents"
+    if [ -z "$root" ]; then
+        # Restore whatever has been paused if any preparation step fails.
+        trap 'resume_installation' EXIT
+        queues=$(private_queues)
+        for queue in $queues; do
+            state=$(queue_state "$queue")
+            printf '%s %s\n' "$queue" "$state" >> "$STATE/queues"
+        done
+        while read -r queue state; do
+            if [ -n "$(lpstat -o "$queue")" ]; then
+                fail 'Finish or cancel Canon jobs before reinstalling.'
+            fi
+        done < "$STATE/queues"
+        for uid in $(ps -axo uid= | sort -nu); do
+            if launchctl print "gui/$uid/$LABEL" >/dev/null 2>&1; then
+                printf '%s\n' "$uid" >> "$STATE/agents"
+            fi
+        done
+        while read -r queue state; do
+            cupsdisable "$queue"
+            [ -z "$(lpstat -o "$queue")" ] || fail 'A Canon job arrived; retry after it finishes.'
+        done < "$STATE/queues"
+        stop_private
+        trap - EXIT
+    fi
+}
+complete_installation() {
+    check
+    if [ -e "$root$STATE" ] || [ -L "$root$STATE" ]; then
+        [ -d "$root$STATE" ] && [ ! -L "$root$STATE" ] || fail 'Invalid install state.'
+        while IFS= read -r path; do
+            if ! grep -Fxq "$path" "$root$SUPPORT/installed-paths.txt"; then
+                rm -f "$root/$path"
+            fi
+        done < "$root$STATE/old-paths"
+        had_queues=$(cat "$root$STATE/queues")
+        resume_installation
+        if [ "${1:-}" != recover ] && [ -z "$root" ] && [ -z "$had_queues" ]; then
+            exec "$0" configure-connected
+        fi
+        echo 'LBP2900 reinstalled; existing queues and printer options preserved.'
+    elif [ -z "$root" ]; then
+        exec "$0" configure-connected
+    fi
 }
 official_monitor_pids() {
     # A removed CUPS queue can leave its Canon monitor holding this USB device.
@@ -71,14 +204,19 @@ case "${1:-}" in
 preflight)
     [ "$#" -le 2 ] || fail 'Usage: preflight [absolute extraction root]'
     set_root "${2:-/}"
-    owned_paths | while IFS= read -r path; do
-        if [ -e "$root$path" ] || [ -L "$root$path" ]; then
-            fail "Existing path: $path. Remove the previous LBP2900 driver installation using its helper first."
-        fi
-    done
-    if [ -z "$root" ] && lsof -nP -iTCP:59290 -iTCP:59390 -sTCP:LISTEN >/dev/null 2>&1; then
+    if has_installation; then
+        check
+        check_owned_paths
+        validate_old_paths
+    elif [ -z "$root" ] && lsof -nP -iTCP:59290 -iTCP:59390 -sTCP:LISTEN >/dev/null 2>&1; then
         fail 'Ports 59290/59390 are already in use.'
     fi
+    ;;
+prepare-install|complete-install)
+    [ "$#" -le 2 ] || fail 'Unexpected install arguments.'
+    set_root "${2:-/}"
+    [ -n "$root" ] || root_required
+    if [ "$1" = prepare-install ]; then prepare_installation; else complete_installation; fi
     ;;
 check)
     [ "$#" -le 2 ] || fail 'Usage: check [absolute extraction root]'
@@ -146,29 +284,7 @@ remove)
         fail 'Finish all jobs in Canon Utility, then remove queues using this driver before removing the runtime.'
     fi
     if [ -z "$root" ]; then
-    # Unload only our label, including other currently logged-in GUI sessions.
-    for console_uid in $(ps -axo uid= | sort -nu); do
-        if launchctl print "gui/$console_uid/$LABEL" >/dev/null 2>&1; then
-            launchctl bootout "gui/$console_uid/$LABEL"
-        fi
-    done
-    pids=$(private_pids)
-    if [ -n "$pids" ]; then
-        for pid in $pids; do
-            kill -TERM "$pid" 2>/dev/null || ! kill -0 "$pid" 2>/dev/null || fail "Cannot stop owned process $pid; runtime retained."
-        done
-        attempts=0
-        while :; do
-            remaining=
-            for pid in $pids; do
-                if kill -0 "$pid" 2>/dev/null; then remaining="$remaining $pid"; fi
-            done
-            [ -n "$remaining" ] || break
-            [ "$attempts" -lt 15 ] || fail "Owned processes did not stop:$remaining; runtime retained."
-            sleep 1
-            attempts=$((attempts + 1))
-        done
-    fi
+        stop_private
     fi
     /bin/rm -R "$root$RUNTIME"
     /bin/rm "$root$PPD" "$root/usr/libexec/cups/backend/lb29u2" "$root$AGENT"
@@ -176,5 +292,5 @@ remove)
     [ -n "$root" ] || pkgutil --forget local.canon-lbp2900.capt10.standalone
     echo 'LBP2900 runtime removed. Official Canon files and queues were not changed.'
     ;;
-*) fail 'Usage: lbp2900-standalone preflight|check|remove [root] | configure-connected | configure USB_URI';;
+*) fail 'Usage: lbp2900-standalone preflight|prepare-install|complete-install|check|remove [root] | configure-connected | configure USB_URI';;
 esac

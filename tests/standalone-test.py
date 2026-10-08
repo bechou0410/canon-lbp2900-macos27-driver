@@ -55,6 +55,18 @@ class StandaloneTest(unittest.TestCase):
             result = subprocess.run(["/bin/sh", "-c", function + '\nQUEUE="$1"; queue_exists', "probe", queues[0]], capture_output=True)
             self.assertEqual(result.returncode, 0)
 
+    def test_queue_state_uses_live_ipp_enums(self):
+        definitions = (PROJECT / "package/standalone/lbp2900-standalone").read_text().split('case "${1:-}" in', 1)[0]
+        listed = subprocess.check_output(["/usr/bin/lpstat", "-v"], text=True)
+        queues = re.findall(r"^device for ([^:]+):", listed, re.M)
+        if not queues:
+            self.skipTest("No local queue available for read-only IPP validation")
+        result = native.run("/bin/sh", "-c", definitions + '\nqueue_state "$1"', "test", queues[0])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(result.stdout.strip(), ("Idle", "Stopped"))
+        result = native.run("/bin/sh", "-c", definitions + '\nqueue_state LBP2900_missing_queue_state_probe', "test")
+        self.assertNotEqual(result.returncode, 0)
+
     def test_only_one_model_and_no_official_install_path_overlap(self):
         files = {p.relative_to(ROOT) for p in ROOT.rglob("*") if p.is_file() or p.is_symlink()}
         official = {p.relative_to(SOURCE) for p in SOURCE.rglob("*") if p.is_file() or p.is_symlink()}
@@ -271,16 +283,22 @@ class StandaloneTest(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         shutil.copytree(ROOT, target, symlinks=True, dirs_exist_ok=True)
         result = native.run(helper, "preflight", target)
-        self.assertNotEqual(result.returncode, 0, "Existing installation must not be overwritten")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         monitor = target / standalone.RUNTIME / "Bidi/lb29monitor"
         before = monitor.read_bytes()
         monitor.write_bytes(before + b"foreign change")
+        result = native.run(helper, "prepare-install", target, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((target / "Library/Application Support/CanonLBP2900InstallState").exists())
         result = native.run(helper, "remove", target, timeout=30)
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(monitor.read_bytes(), before + b"foreign change")
         monitor.write_bytes(before)
         extra = target / standalone.RUNTIME / "user-file.txt"
         extra.write_text("Preserve this user-owned file")
+        result = native.run(helper, "prepare-install", target, timeout=30)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertFalse((target / "Library/Application Support/CanonLBP2900InstallState").exists())
         result = native.run(helper, "remove", target, timeout=30)
         self.assertNotEqual(result.returncode, 0)
         self.assertTrue(extra.exists())
@@ -297,6 +315,45 @@ class StandaloneTest(unittest.TestCase):
         (target / standalone.RUNTIME).symlink_to(self.work / "absent-target")
         result = native.run(helper, "preflight", target)
         self.assertNotEqual(result.returncode, 0)
+
+    def test_reinstall_and_upgrade_preserve_state_and_remove_retired_files(self):
+        helper = ROOT / standalone.SUPPORT / "lbp2900-standalone"
+        state = Path("Library/Application Support/CanonLBP2900InstallState")
+        packages = ["Canon-LBP2900-CAPT-10.0.10-standalone-0.2.0.pkg",
+                    "Canon-LBP2900-CAPT-10.0.10-0.2.4.pkg", "Canon-LBP2900-v27.3.pkg"]
+        # Historical release archives are optional locally retained evidence;
+        # current-version reinstall always runs on a fresh checkout/build.
+        packages = [None] + [p for p in packages if (PROJECT / "artifacts" / p).exists()]
+        for index, package in enumerate(packages):
+            with self.subTest(package=package or "current-version"):
+                expanded = self.work / f"upgrade-source-{index}"
+                if package:
+                    subprocess.run(["pkgutil", "--expand-full", str(PROJECT / "artifacts" / package), str(expanded)], check=True, capture_output=True)
+                    target = expanded / "runtime.pkg/Payload"
+                else:
+                    target = expanded
+                    shutil.copytree(ROOT, target, symlinks=True)
+                uri = target / standalone.SUPPORT / "queue-uri"
+                uri.write_text("lb29u2://localhost:59290/usbSP/Canon/LBP2900?serial=upgrade-test\n")
+                original_uri = uri.read_bytes()
+                old_paths = set((target / standalone.SUPPORT / "installed-paths.txt").read_text().splitlines())
+                for attempt in range(2):
+                    result = native.run(helper, "prepare-install", target)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertTrue((target / state / "old-paths").exists())
+                    # Retry an interrupted preparation before replacing payload.
+                    result = native.run(helper, "prepare-install", target)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    subprocess.run(["/usr/bin/ditto", str(ROOT), str(target)], check=True, capture_output=True)
+                    result = native.run(helper, "complete-install", target)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertFalse((target / state).exists())
+                    self.assertEqual(uri.read_bytes(), original_uri)
+                    new_paths = set((target / standalone.SUPPORT / "installed-paths.txt").read_text().splitlines())
+                    for removed in old_paths - new_paths:
+                        self.assertFalse((target / removed).exists(), removed)
+                    result = native.run(helper, "preflight", target)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_process_ownership_uses_executable_when_monitor_argv_is_relative(self):
         # Real OS processes, without loading Canon code or opening a printer.
@@ -316,6 +373,20 @@ class StandaloneTest(unittest.TestCase):
                 path.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(executable, path)
                 processes.append(subprocess.Popen([path.name, "--printer-uri=" + device], executable=path))
+            # A real external process loading a private library is not owned.
+            library_source = self.work / "library.c"
+            library_source.write_text("int driver_symbol(void) { return 1; }\n")
+            library = target / standalone.RUNTIME / "Libs/library.dylib"
+            library.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["xcrun", "clang", "-dynamiclib", str(library_source), "-o", str(library)], check=True, capture_output=True)
+            consumer_source = self.work / "consumer.c"
+            consumer_source.write_text('#include <dlfcn.h>\n#include <unistd.h>\nint main(int argc,char **argv) { if (!dlopen(argv[1],RTLD_NOW)) return 1; write(1,"ready\\n",6); sleep(60); return 0; }\n')
+            consumer = self.work / "consumer"
+            subprocess.run(["xcrun", "clang", str(consumer_source), "-o", str(consumer)], check=True, capture_output=True)
+            processes.append(subprocess.Popen([consumer, library], stdout=subprocess.PIPE))
+            self.assertEqual(processes[-1].stdout.readline(), b"ready\n")
+            loaded = subprocess.check_output(["lsof", "-nP", "-a", "-p", str(processes[-1].pid), "-d", "txt", "-Fn"], text=True)
+            self.assertIn(str(library), loaded)
             private = native.run("/bin/sh", "-c", definitions + '\nroot=$1\nprivate_pids\n', "test", target)
             self.assertEqual(private.returncode, 0, private.stderr)
             self.assertEqual(private.stdout.split(), [str(processes[0].pid)])
@@ -326,6 +397,8 @@ class StandaloneTest(unittest.TestCase):
             for process in processes:
                 process.terminate()
                 process.wait(timeout=5)
+                if process.stdout:
+                    process.stdout.close()
 
 
 if __name__ == "__main__":

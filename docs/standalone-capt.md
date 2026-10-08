@@ -1,6 +1,6 @@
-# Canon LBP2900 v27.3 — technical guide
+# Canon LBP2900 v27.3.1 — technical guide
 
-**Bản hiện tại: Canon LBP2900 v27.3**, dành cho mục tiêu LBP2900/2900B. Tên bộ cài và máy in bỏ “CAPT” và “Standalone”; tên công cụ, receipt và runtime nội bộ giữ nguyên để tương thích. v27.3 là phiên bản project; máy thử chạy macOS 27.2.
+**Bản hiện tại: Canon LBP2900 v27.3.1**, dành cho mục tiêu LBP2900/2900B. Tên bộ cài và máy in bỏ “CAPT” và “Standalone”; tên công cụ, receipt và runtime nội bộ giữ nguyên để tương thích. v27.3.1 là phiên bản project; máy thử chạy macOS 27.2.
 
 Xem [README tiếng Anh](../README.md), [README tiếng Việt](../README.vi.md) và [phạm vi nghiệm thu](verification.md). Bộ cài có tài nguyên Anh/Việt, bản tự chọn theo ngôn ngữ macOS với dự phòng tiếng Anh, cùng hai gói ngôn ngữ riêng. Nội dung Canon gốc vẫn là tiếng Anh.
 
@@ -35,7 +35,7 @@ python3 tools/capt-standalone.py --language all
 python3 tests/standalone-test.py
 ```
 
-Đầu ra: `artifacts/Canon-LBP2900-v27.3.pkg`, `-en.pkg`, `-vi.pkg` và file `.sha256` cùng tên. Build xác minh lại DMG gốc, chữ ký installer Canon và notarization; giải nén mới, chọn payload, patch/ký, đóng gói rồi giải nén PKG để kiểm checksum. Gói cục bộ chứa thành phần bản quyền Canon và kèm license gốc trong màn hình Installer. Payload Canon không đưa vào Git; archive bộ cài phát hành giữ license và thông báo bản quyền gốc.
+Đầu ra: `artifacts/Canon-LBP2900-v27.3.1.pkg`, `-en.pkg`, `-vi.pkg` và file `.sha256` cùng tên. Build xác minh lại DMG gốc, chữ ký installer Canon và notarization; giải nén mới, chọn payload, patch/ký, đóng gói rồi giải nén PKG để kiểm checksum. Gói cục bộ chứa thành phần bản quyền Canon và kèm license gốc trong màn hình Installer. Payload Canon không đưa vào Git; archive bộ cài phát hành giữ license và thông báo bản quyền gốc.
 
 `config/standalone-binary-patches.json` là nguồn của các vị trí/hằng số được sửa. `tools/capt-standalone.py:selected()` sở hữu danh sách thành phần giữ lại. `relocation.json`, `installed.sha256`, `installed-paths.txt` được sinh trong payload để truy vết và kiểm tra file; không chỉnh thủ công.
 
@@ -43,7 +43,7 @@ Kiểm thử dựng trang chạy filter thật, so sánh từng byte với ngu�
 
 ## Cài và kết nối máy in
 
-Hoàn tất/hủy mọi job trước khi đổi driver và gỡ runtime riêng trước khi cài phiên bản mới. Bật đúng một LBP2900, cắm USB rồi cài PKG. Postinstall kiểm integrity và chạy `configure-connected`; khi tên queue chưa bị sử dụng, nó tạo `Canon_LBP2900` với kết nối `lb29u2://` và khởi động LaunchAgent cho desktop đang đăng nhập.
+Hoàn tất/hủy mọi job trước khi đổi driver. Có thể cài đè bản driver dự án còn nguyên vẹn, không cần gỡ trước. Bật đúng một LBP2900, cắm USB rồi cài PKG. Ở máy chưa cài, postinstall kiểm integrity và chạy `configure-connected`; khi tên queue chưa bị sử dụng, nó tạo `Canon_LBP2900` với kết nối `lb29u2://` và khởi động LaunchAgent cho desktop đang đăng nhập.
 
 Nếu máy chưa cắm, không có đúng một thiết bị hoặc queue cũ cần xem xét, bộ cài không ghi đè queue. Sau khi chuẩn bị thiết bị và hoàn tất/xóa queue cũ của riêng 2900, chạy:
 
@@ -69,7 +69,7 @@ Khi gỡ, hoàn tất/hủy job trong Utility, xóa các queue dùng `lb29u2` r�
 sudo '/Library/Application Support/CanonLBP2900Standalone/lbp2900-standalone' remove
 ```
 
-Helper từ chối file đã sửa, file lạ, queue còn dùng runtime hoặc tiến trình riêng không dừng. Nhận diện monitor bằng file thực thi đang nạp vì Canon khởi chạy nó bằng tên ngắn; chờ tiến trình riêng dừng tối đa 15 giây rồi mới xóa. Nó chỉ gỡ runtime/PPD/backend/LaunchAgent/support và receipt riêng; không gỡ driver Canon gốc. Preference/cache theo người dùng được giữ lại để tránh xóa dữ liệu phiên chưa xác minh. Nếu cài lỗi giữa chừng hoặc integrity check không qua, giữ log và kiểm tra các file cụ thể; không dùng lệnh xóa chung thư mục Canon.
+Helper từ chối file đã sửa, file lạ, queue còn dùng runtime hoặc tiến trình riêng không dừng. Nhận diện monitor bằng file thực thi đang nạp vì Canon khởi chạy nó bằng tên ngắn; gửi TERM và chờ tối đa 15 giây; monitor treo chỉ được KILL sau khi xác minh lại file thực thi thuộc runtime riêng. Nó chỉ gỡ runtime/PPD/backend/LaunchAgent/support và receipt riêng; không gỡ driver Canon gốc. Preference/cache theo người dùng được giữ lại để tránh xóa dữ liệu phiên chưa xác minh. Nếu cài lỗi giữa chừng hoặc integrity check không qua, giữ log và kiểm tra các file cụ thể; không dùng lệnh xóa chung thư mục Canon.
 
 ## Kết quả nghiệm thu ngày 2026-10-08
 
@@ -88,3 +88,11 @@ Helper từ chối file đã sửa, file lạ, queue còn dùng runtime hoặc t
 LBP2900B, Intel, máy sạch chưa từng cài Canon, logout/reboot toàn máy, Cleaning, kẹt giấy, mọi tùy chọn trên giấy và chạy dài còn cần nghiệm thu riêng. Không cố tạo kẹt giấy. Lượt hiện tại đã dùng đúng 2/2 tờ được phép; lượt patch-only trước đó dùng 4 tờ riêng. Chưa có Developer ID/notarization, nhưng gói đã cài và chạy cục bộ mà không thay đổi SIP/Gatekeeper.
 
 Chi tiết phiên thử và lỗi đã sửa: [phạm vi kiểm tra công khai](verification.md). Các log máy và serial chỉ nằm trong `artifacts/` bị Git bỏ qua.
+
+## Cài đè từ v27.3.1
+
+Preinstall dùng manifest/checksum và danh sách file để nhận diện bản dự án nguyên vẹn. Từ chối file lạ, file đã sửa và job CUPS chưa hoàn tất. Lưu danh sách file cũ, queue/trạng thái IPP và các phiên chạy LaunchAgent trong thư mục root-only `/Library/Application Support/CanonLBP2900InstallState`; tạm dừng queue và tiến trình riêng trước khi PackageKit thay file. Không thay PPD đang dùng, URI, máy in mặc định hoặc tùy chọn queue.
+
+Postinstall kiểm payload mới, dọn các file của bản cũ không còn trong payload, khởi động lại các phiên dịch vụ còn đăng nhập và phục hồi queue vốn đang chạy; queue vốn tạm dừng vẫn tạm dừng. Nếu không còn queue riêng thì chạy nhận diện USB như cài mới. File Canon gốc và Epson nằm ngoài đường dẫn sở hữu.
+
+Nếu cài bị gián đoạn, chạy lại PKG. Gói chỉ phục hồi trạng thái đã lưu khi integrity của bản đang có đạt; payload không nguyên vẹn cần kiểm tra log trước, không tự xóa thư mục Canon. Cần hoàn tất/hủy job trong Canon Utility kể cả job đã bàn giao khỏi CUPS.

@@ -73,4 +73,6 @@ The builder verifies the official Canon input, packages the required components 
 
 ## Credits
 
+Developed with assistance from **OpenAI Codex** for implementation, debugging, automated testing and documentation, with hardware testing and print validation performed by the project maintainer.
+
 Based on Canon Printer Driver & Utilities for Mac V10.0.10. Canon owns the original code and resources; the original license is included. This community project is independent and is not endorsed or certified by Canon or Apple. [Notices](NOTICE.md) · [Official Canon source](https://vn.canon/en/support/0101321320) · [Previous releases](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases).

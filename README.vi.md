@@ -73,4 +73,6 @@ Builder xác minh nguồn Canon chính thức, đóng gói thành phần cần t
 
 ## Ghi nhận
 
+Phát triển với sự hỗ trợ của **OpenAI Codex** trong lập trình, gỡ lỗi, kiểm thử tự động và viết tài liệu; người duy trì dự án thực hiện thử nghiệm phần cứng và xác nhận bản in thực tế.
+
 Dựa trên Canon Printer Driver & Utilities for Mac V10.0.10. Canon sở hữu mã gốc và tài nguyên; giấy phép gốc được giữ trong bộ cài. Đây là dự án cộng đồng độc lập, không được Canon hoặc Apple bảo trợ/chứng nhận. [Thông báo bản quyền](NOTICE.md) · [Nguồn Canon chính thức](https://vn.canon/en/support/0101321320) · [Các bản phát hành trước](https://github.com/bechou0410/canon-lbp2900-macos27-driver/releases).

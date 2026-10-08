@@ -13,6 +13,10 @@ AGENT=/Library/LaunchAgents/jp.co.canon.LBP2900RT.BG.plist
 LABEL=jp.co.canon.LBP2900RT.BackGrounder
 QUEUE=Canon_LBP2900
 fail() { echo "LBP2900 driver: $*" >&2; exit 1; }
+queue_exists() {
+    # macOS lpstat may return success with empty output for a missing queue.
+    lpstat -v 2>/dev/null | awk -v queue="$QUEUE" 'index($0, " " queue ": ") {found=1} END {exit !found}'
+}
 set_root() {
     root=${1:-/}
     case "$root" in /*) ;; *) fail 'Root must be absolute.';; esac
@@ -87,7 +91,7 @@ configure-connected)
     [ "$#" -eq 1 ] || fail 'Usage: configure-connected'
     check
     # A fresh install may create one queue, but must never take over an existing one.
-    if lpstat -v "$QUEUE" >/dev/null 2>&1 && [ ! -f "$SUPPORT/queue-uri" ]; then
+    if queue_exists && [ ! -f "$SUPPORT/queue-uri" ]; then
         echo 'An existing Canon_LBP2900 queue needs manual review; no queue changed.'
         exit 0
     fi
@@ -111,10 +115,10 @@ configure)
         fail 'This printer still has an official-runtime CAPT queue. Finish all jobs in Canon Utility and remove that queue before switching runtimes.'
     fi
     [ -z "$(official_monitor_pids "$2")" ] || fail 'The old Canon USB monitor is still running for this printer. After removing its old queue and finishing all Canon jobs, sign out and back in, then retry. No queue was changed.'
-    if lpstat -v "$QUEUE" >/dev/null 2>&1; then
+    if queue_exists; then
         [ -f "$SUPPORT/queue-uri" ] || fail 'Existing queue is not owned by this helper.'
         [ "$(cat "$SUPPORT/queue-uri")" = "$URI" ] || fail 'Existing queue belongs to another printer.'
-        [ "$(lpstat -v "$QUEUE")" = "device for $QUEUE: $URI" ] || fail 'Queue URI was changed.'
+        [ "$(lpstat -v "$QUEUE" | awk '{print $NF}')" = "$URI" ] || fail 'Queue URI was changed.'
         [ -z "$(lpstat -o "$QUEUE")" ] || fail 'Finish or cancel pending jobs first.'
     fi
     lpadmin -p "$QUEUE" -v "$URI" -P "$PPD" -D 'Canon LBP2900' -E \

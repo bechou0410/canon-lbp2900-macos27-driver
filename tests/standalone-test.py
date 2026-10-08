@@ -43,6 +43,18 @@ class StandaloneTest(unittest.TestCase):
     def tearDownClass(cls):
         cls.temp.cleanup()
 
+    def test_queue_presence_uses_real_cups_output(self):
+        helper = (PROJECT / "package/standalone/lbp2900-standalone").read_text()
+        function = re.search(r"queue_exists\(\) \{.*?\n\}", helper, re.S).group(0)
+        script = function + '\nQUEUE=LBP2900_missing_queue_presence_probe; queue_exists'
+        result = subprocess.run(["/bin/sh", "-c", script], capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        listed = subprocess.check_output(["/usr/bin/lpstat", "-v"], text=True)
+        queues = re.findall(r"^device for ([^:]+):", listed, re.M)
+        if queues:
+            result = subprocess.run(["/bin/sh", "-c", function + '\nQUEUE="$1"; queue_exists', "probe", queues[0]], capture_output=True)
+            self.assertEqual(result.returncode, 0)
+
     def test_only_one_model_and_no_official_install_path_overlap(self):
         files = {p.relative_to(ROOT) for p in ROOT.rglob("*") if p.is_file() or p.is_symlink()}
         official = {p.relative_to(SOURCE) for p in SOURCE.rglob("*") if p.is_file() or p.is_symlink()}

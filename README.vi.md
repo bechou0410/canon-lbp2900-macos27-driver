@@ -35,7 +35,7 @@ Nếu đã có `Canon_LBP2900`, bộ cài giữ queue đó để kiểm tra. Ho�
 
 ![Canon Printer Utility sẵn sàng in](docs/images/utility-ready.png)
 
-Ảnh Utility từ bản 0.2.4 đã kiểm; v27.3 đổi tên hiển thị và giữ nguyên mã xử lý gốc.
+Ảnh Utility v27.3 sau khi cài trên máy thử; mã máy gốc giữ nguyên từ 0.2.4.
 
 PKG chưa có chữ ký Developer ID Installer hoặc notarization của Apple. Thành phần đã sửa được ký ad-hoc. Quá trình thử không tắt SIP hoặc Gatekeeper. Xem [thiết lập và kiến trúc](docs/standalone-capt.md) để bảo trì và khôi phục.
 
@@ -49,7 +49,7 @@ PKG chưa có chữ ký Developer ID Installer hoặc notarization của Apple. 
 | Tùy chọn Canon gốc | Bổ sung CAPTUIKit còn thiếu; Finishing, Paper Source, Quality/Toner và About nạp từ runtime riêng qua Preview. Chưa nghiệm thu đầu ra vật lý của mọi tùy chọn. |
 | Tự mở thêm Utility Canon gốc rồi crash | Tách kênh thông báo lỗi; hai lần thông báo thật chỉ mở một Utility riêng khi hai dịch vụ cùng chạy, không có crash mới từ ứng dụng gốc. |
 | Monitor USB còn chạy sau khi xóa queue | Nhận diện bằng file thực thi đang nạp dù tên tiến trình ngắn; helper chờ tiến trình riêng dừng trước khi gỡ. |
-| Utility crash sau khi thêm queue USB thủ công | Tái hiện ở 0.2.4; thiết lập đúng kết nối/dịch vụ gốc giải quyết lỗi. v27.3 thêm thiết lập máy đang kết nối sau khi cài, giữ queue trùng tên để kiểm tra. Luồng tự thiết lập mới đã qua kiểm thử offline; chưa nghiệm thu cài v27.3 trên máy thật. |
+| Utility crash sau khi thêm queue USB thủ công | Tái hiện ở 0.2.4; thiết lập đúng kết nối/dịch vụ gốc giải quyết lỗi. v27.3 thêm thiết lập máy đang kết nối sau khi cài, giữ queue trùng tên để kiểm tra. Luồng tự thiết lập đã qua phép thử cài v27.3 trên máy Mac thử nghiệm. |
 | Cài Canon V10.0.10 gốc sau driver này | Hash riêng, queue, Utility và một lượt in thật vẫn hoạt động sau cài lại Canon gốc trên 0.2.2. Chưa có máy Canon model khác để thử phần cứng. |
 | Build có thể kiểm chứng và ngôn ngữ | Kiểm tự động dựng trang, chữ ký, dependency, ownership, vòng đời, cách ly và tài nguyên hai ngôn ngữ. Xem [phạm vi kiểm tra](docs/verification.md). |
 

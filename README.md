@@ -35,7 +35,7 @@ If `Canon_LBP2900` already exists, automatic setup preserves it for review. Fini
 
 ![Canon Printer Utility ready](docs/images/utility-ready.png)
 
-Utility image from the verified 0.2.4 installation; v27.3 changes its displayed product name while preserving native machine code.
+Actual v27.3 Utility after installation on the test Mac; native machine code remains unchanged from 0.2.4.
 
 The PKG has no Developer ID Installer signature or Apple notarization. Changed components are signed ad-hoc. Testing did not disable SIP or Gatekeeper. For maintenance and recovery details, see [setup and architecture](docs/standalone-capt.md).
 
@@ -49,7 +49,7 @@ The PKG has no Developer ID Installer signature or Apple notarization. Changed c
 | Native Canon print options | Restored the missing CAPTUIKit framework; Finishing, Paper Source, Quality/Toner and About dialogs loaded through Preview from the private runtime. Physical output of every option is not qualified. |
 | Extra original Utility opening and crashing | Separated the native error-notification channel; two real notifications opened only one private Utility while both driver services ran, with no new original-app crash. |
 | USB monitor surviving queue removal | Lifecycle checks identify the loaded executable even when its process name is short; guarded removal waits for owned processes. |
-| Utility crash after a manual USB queue | Reproduced on 0.2.4 and corrected by establishing the native transport/service. v27.3 adds connected-printer setup after installation; conflicting queues are preserved for review. This new automatic setup has passed offline checks; a live v27.3 installation remains unqualified. |
+| Utility crash after a manual USB queue | Reproduced on 0.2.4 and corrected by establishing the native transport/service. v27.3 adds connected-printer setup after installation; conflicting queues are preserved for review. Automatic setup passed a live v27.3 installation on the test Mac. |
 | Later official Canon V10.0.10 installation | Private hashes, queue, Utility and an actual print survived an official reinstall on 0.2.2. Other Canon model hardware was unavailable. |
 | Reproducible packaging and languages | Automated render, signature, dependency, ownership, lifecycle, isolation and bilingual-resource checks. See [verification scope](docs/verification.md). |
 

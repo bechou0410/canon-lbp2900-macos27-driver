@@ -8,7 +8,7 @@ v27.3 is the project release number, not an assertion that macOS 27.3 was tested
 
 Ten offline checks passed against the real Canon-derived payload: curated model/resource selection; exact input hash, architecture and patch preimage guards; both-slice signatures; dependency and rpath closure; actual render equivalence in five cases; separate notification endpoints; both official/private payload overlay orders; guarded lifecycle/removal; real OS process ownership with a short monitor name; and all three installer language variants carrying the same payload and unchanged Canon license.
 
-Native machine code is unchanged from 0.2.4. The Utility's display-name metadata and corresponding signature change. Post-install setup now discovers exactly one connected USB LBP2900, refuses ambiguous or foreign existing queues, and invokes the existing checked configure path. No test submits a print job.
+Native machine code is unchanged from 0.2.4. The Utility's display-name metadata and corresponding signature change. Post-install setup now discovers exactly one connected USB LBP2900, refuses ambiguous or foreign existing queues, and invokes the existing checked configure path. No test submits a print job. The v27.3 post-install USB discovery/configuration path has passed guarded offline checks but has not yet been exercised through an authenticated installation on the hardware host.
 
 ## Inherited physical evidence
 

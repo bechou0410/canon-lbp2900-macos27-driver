@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+[ "${3:-/}" = / ] || { echo 'Install only on the startup volume.' >&2; exit 1; }
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+exec "$HERE/lbp2900-standalone" preflight

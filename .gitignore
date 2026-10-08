@@ -1,4 +1,6 @@
 .DS_Store
+artifacts/
+__pycache__/
 *.log
 *.tmp
 build/
@@ -6,3 +8,6 @@ tmp/
 *.xattr
 dist/Canon-CAPT-runtime-restore-local.pkg
 dist/Canon-CAPT-clean-uninstall-local.pkg
+
+# Local work records and diagnostic evidence are not release source.
+plans/

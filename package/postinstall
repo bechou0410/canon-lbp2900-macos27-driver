@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+[ "${3:-/}" = / ] || exit 1
+exec '/Library/Application Support/CanonLBP2900CAPTPatch/capt-patch' apply

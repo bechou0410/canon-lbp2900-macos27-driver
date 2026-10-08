@@ -1,0 +1,131 @@
+#!/bin/sh
+# Add an isolated LBP2900 monitor and PPD; never overwrite Canon's originals.
+set -eu
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+LC_ALL=C
+LANG=C
+# Apple CUPS honors LANG only when SOFTWARE identifies the caller.
+SOFTWARE=CanonLBP2900CAPTPatch
+export PATH LC_ALL LANG SOFTWARE
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT=${2:-/}
+case "$ROOT" in /*) ;; *) echo 'Root must be absolute.' >&2; exit 1;; esac
+ROOT=${ROOT%/}
+BASE="$ROOT/Library/Printers/Canon/CUPSCAPT2"
+PPDS="$ROOT/Library/Printers/PPDs/Contents/Resources"
+MONITOR="$BASE/Bidi/captmonlbp2900"
+PPD="$PPDS/CNMC2LBP2900AUK.ppd.gz"
+SUPPORT="$ROOT/Library/Application Support/CanonLBP2900CAPTPatch"
+WORK=
+LOCKED=0
+PUBLISHING=0
+COMMITTED=0
+cleanup() {
+    if [ "$PUBLISHING" -eq 1 ] && [ "$COMMITTED" -eq 0 ]; then
+        # Restore the previously verified pair if publishing fails midway.
+        for item in monitor ppd manifest; do
+            case "$item" in monitor) dest=$MONITOR;; ppd) dest=$PPD;; manifest) dest="$SUPPORT/installed.sha256";; esac
+            if [ -f "$WORK/old-$item" ]; then
+                cp -p "$WORK/old-$item" "$dest"
+            elif [ -e "$dest" ]; then
+                /bin/rm "$dest"
+            fi
+        done
+    fi
+    if [ -n "$WORK" ]; then /bin/rm -r "$WORK"; fi
+    if [ "$LOCKED" -eq 1 ]; then rmdir "$SUPPORT/apply.lock"; fi
+}
+trap cleanup EXIT
+fail() { echo "CAPT patch: $*" >&2; exit 1; }
+
+check_source() {
+    [ -d "$BASE" ] || fail 'Install official Canon CAPT V10.0.10 (English) first.'
+    (cd "${ROOT:-/}" && shasum --quiet -a 256 -c "$HERE/runtime.sha256") || fail 'Canon files differ from verified V10.0.10.'
+    for app in 'StatusMonitor/StatusMonitor.app' 'BackGrounder/Canon CAPT BackGrounder.app'; do
+        version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$BASE/$app/Contents/Info.plist")
+        [ "$version" = 10.0.10 ] || fail "Wrong $app version."
+        codesign --verify --deep --strict "$BASE/$app" || fail "Invalid Canon application: $app"
+    done
+    [ -x "$ROOT/usr/libexec/cups/backend/cnbma2" ] || fail 'Canon cnbma2 backend is missing.'
+    [ -f "$ROOT/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist" ] || fail 'Canon BackGrounder LaunchAgent is missing.'
+    [ ! -e "$ROOT/Library/LaunchAgents/jp.co.canon.CUPSCAPT2.BG.plist.disabled-by-lbp2900-patcher" ] || fail 'Restore the old disabled BackGrounder before installing this patch.'
+}
+
+check_owned() {
+    if [ -e "$MONITOR" ] || [ -e "$PPD" ]; then
+        [ -f "$SUPPORT/installed.sha256" ] || fail 'Unowned LBP2900 patch files already exist.'
+        (cd "${ROOT:-/}" && shasum -a 256 -c "$SUPPORT/installed.sha256") || fail 'Installed patch was modified; preserve it before reinstall/removal.'
+    fi
+}
+
+case "${1:-check}" in
+check) check_source ;;
+apply)
+    if [ -z "$ROOT" ]; then [ "$(id -u)" -eq 0 ] || fail 'Run apply as root.'; fi
+    check_source
+    mkdir -p "$SUPPORT"
+    mkdir "$SUPPORT/apply.lock" || fail 'Another apply is active; inspect any stale apply.lock before retrying.'
+    LOCKED=1
+    check_owned
+    # Generate and validate both files before publishing either file.
+    WORK=$(mktemp -d "$BASE/Bidi/.lbp2900-stage.XXXXXX")
+    cp "$BASE/Bidi/captmoncnab3" "$WORK/captmonlbp2900"
+    # Only the standalone IEEE-1284 device-match string changes, once per CPU slice.
+    # Keep the LBP3000 internal profile so Canon's UI, resources and engine agree.
+    /usr/bin/perl -0777 -i -pe 'BEGIN { $n=0 } $n += s/\x00MDL:LBP3000;\x00/\x00MDL:LBP2900;\x00/g; END { die "Expected two model matches\n" unless $n == 2 }' "$WORK/captmonlbp2900"
+    codesign --force --sign - --preserve-metadata=entitlements,flags,runtime --timestamp=none "$WORK/captmonlbp2900"
+    codesign --verify --strict --all-architectures "$WORK/captmonlbp2900"
+    gzip -dc "$PPDS/CNMC2LBP3000AUK.ppd.gz" > "$WORK/native.ppd"
+    /usr/bin/perl -i -pe '
+      s/^\*ModelName: .*/\*ModelName: "Canon LBP2900 CAPT"/;
+      s/^\*NickName: .*/\*NickName: "Canon LBP2900 CAPT (V10.0.10 patch)"/;
+      s/^\*ShortNickName: .*/\*ShortNickName: "LBP2900"/;
+      s/^\*PCFileName: .*/\*PCFileName: "CNL290AK.PPD"/;
+      s/^\*Product: .*/\*Product: "(lbp2900)"/;
+      s/^\*Throughput: .*/\*Throughput: "12"/;
+      s/^\*opbidiPlugin: .*/\*opbidiPlugin: "captmonlbp2900"/;
+    ' "$WORK/native.ppd"
+    set --
+    # An extracted test root belongs to the developer, whereas a live CUPS
+    # installation must have root-owned resources. Check ownership on live installs.
+    if [ -n "$ROOT" ]; then set -- -I filters -R "$ROOT"; fi
+    if /usr/bin/cupstestppd "$@" "$WORK/native.ppd" > "$WORK/ppd-check.txt" 2>&1; then
+        :
+    else
+        status=$?
+        cat "$WORK/ppd-check.txt"
+        # Canon's pinned original uses Resolution=600, which CUPS' strict
+        # Adobe naming check rejects. Retain this vendor option contract;
+        # reject every other failure, including missing native resources.
+        [ "$status" -eq 4 ] || fail 'PPD syntax check failed.'
+        errors=$(/usr/bin/grep -F '**FAIL**' "$WORK/ppd-check.txt")
+        [ "$errors" = '      **FAIL**  Bad option Resolution choice 600' ] || fail 'Unexpected PPD validation failure.'
+        echo 'Known original Canon PPD diagnostic: Resolution choice 600 is not an Adobe-standard name.'
+    fi
+    gzip -n -c "$WORK/native.ppd" > "$WORK/CNMC2LBP2900AUK.ppd.gz"
+    chmod 755 "$WORK/captmonlbp2900"
+    chmod 644 "$WORK/CNMC2LBP2900AUK.ppd.gz"
+    [ ! -e "$MONITOR" ] || cp -p "$MONITOR" "$WORK/old-monitor"
+    [ ! -e "$PPD" ] || cp -p "$PPD" "$WORK/old-ppd"
+    [ ! -e "$SUPPORT/installed.sha256" ] || cp -p "$SUPPORT/installed.sha256" "$WORK/old-manifest"
+    PUBLISHING=1
+    mv "$WORK/captmonlbp2900" "$MONITOR"
+    mv "$WORK/CNMC2LBP2900AUK.ppd.gz" "$PPD"
+    (cd "${ROOT:-/}" && shasum -a 256 Library/Printers/Canon/CUPSCAPT2/Bidi/captmonlbp2900 Library/Printers/PPDs/Contents/Resources/CNMC2LBP2900AUK.ppd.gz) > "$SUPPORT/installed.sha256"
+    chmod 644 "$SUPPORT/installed.sha256"
+    COMMITTED=1
+    echo 'Native patch installed. Original Canon files are unchanged.'
+    ;;
+remove)
+    if [ -z "$ROOT" ]; then [ "$(id -u)" -eq 0 ] || fail 'Run remove as root.'; fi
+    check_owned
+    if [ -z "$ROOT" ] && lpstat -v 2>/dev/null | /usr/bin/grep -q '^device for Canon_LBP2900_CAPT:'; then
+        fail 'Remove the Canon_LBP2900_CAPT queue before removing its driver.'
+    fi
+    [ ! -e "$MONITOR" ] || /bin/rm "$MONITOR"
+    [ ! -e "$PPD" ] || /bin/rm "$PPD"
+    [ ! -e "$SUPPORT/installed.sha256" ] || /bin/rm "$SUPPORT/installed.sha256"
+    echo 'Added patch files removed; original Canon runtime is unchanged.'
+    ;;
+*) fail 'Usage: capt-patch check|apply|remove [absolute root]' ;;
+esac

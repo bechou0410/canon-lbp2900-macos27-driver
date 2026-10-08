@@ -1,0 +1,6 @@
+#!/bin/sh
+set -eu
+[ "${3:-/}" = / ] || exit 1
+HELPER='/Library/Application Support/CanonLBP2900Standalone/lbp2900-standalone'
+"$HELPER" check
+exec "$HELPER" configure-connected

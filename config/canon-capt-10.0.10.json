@@ -1,0 +1,16 @@
+{
+  "version": "10.0.10",
+  "page": "https://vn.canon/en/support/0101321320",
+  "url": "https://gdlp01.c-wss.com/gds/3/0100013213/01/mac-capt-v10010-uken.dmg",
+  "sha256": "f116426b93443a420181a15e35e50f3a1cfaa3cb69c1b25ada9a752eb51e2819",
+  "signer": "Developer ID Installer: Canon Inc. (XE2XNRRXZ5)",
+  "runtime_sha256": {
+    "Library/Printers/Canon/CUPSCAPT2/Bidi/captmoncnab3": "2d8e88204e655aabe9fac9b21fc58e007983ed07f6b6cbd2daa95cc7d580a283",
+    "Library/Printers/Canon/CUPSCAPT2/Bins/capdftopdl": "d3770e4edb737b1d1139e7c227ccd37f3dc66b99597bd9d7bda9c1e3a47eba9f",
+    "Library/Printers/Canon/CUPSCAPT2/Libs/libcaptfilter2.dylib": "2f3e6ab848e566fbdc182d4a57dacbf3ef0b188949c0a68236a61d0bffe8c1b3",
+    "Library/Printers/Canon/CUPSCAPT2/CCPD/ccpd": "31d9cbc6656a61fbdebcb3d30cb6e2947139de4278b381d74c6774788f3517dc",
+    "Library/Printers/Canon/CUPSCAPT2/Libs/caiousb.dylib": "1a452d9b94285fbbab471931fa9ed9cc1a07f2e8d999aa07598830c01eab2cc1",
+    "Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app/Contents/MacOS/StatusMonitor": "9eeeadf935951124442b4adaf989954a0812c638b9be75d1ae4c8255b38bb3b5",
+    "Library/Printers/PPDs/Contents/Resources/CNMC2LBP3000AUK.ppd.gz": "765d5cecff1d4c111607896617c1dbd1fe633cee67c978b6e619938382d2b9ca"
+  }
+}

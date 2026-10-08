@@ -1,0 +1,176 @@
+#!/bin/sh
+# Lifecycle for the isolated runtime. Never mutates the official Canon driver.
+set -eu
+PATH=/usr/bin:/bin:/usr/sbin:/sbin
+LC_ALL=C
+LANG=C
+SOFTWARE=CanonLBP2900Standalone
+export PATH LC_ALL LANG SOFTWARE
+RUNTIME=/Library/Printers/Canon/LBP2900RT
+SUPPORT='/Library/Application Support/CanonLBP2900Standalone'
+PPD=/Library/Printers/PPDs/Contents/Resources/LocalLBP2900CAPT.ppd.gz
+AGENT=/Library/LaunchAgents/jp.co.canon.LBP2900RT.BG.plist
+LABEL=jp.co.canon.LBP2900RT.BackGrounder
+QUEUE=Canon_LBP2900
+fail() { echo "LBP2900 driver: $*" >&2; exit 1; }
+set_root() {
+    root=${1:-/}
+    case "$root" in /*) ;; *) fail 'Root must be absolute.';; esac
+    [ "$root" != / ] || root=
+}
+owned_paths() {
+    printf '%s\n' "$RUNTIME" "$SUPPORT" "$PPD" /usr/libexec/cups/backend/lb29u2 "$AGENT"
+}
+check() {
+    [ -f "$root$SUPPORT/installed.sha256" ] || fail 'Installed manifest is missing.'
+    for path in "$RUNTIME" "$SUPPORT"; do
+        [ ! -L "$root$path" ] || fail "Private directory is a symlink: $path"
+    done
+    (cd "${root:-/}" && shasum -a 256 -c "$root$SUPPORT/installed.sha256")
+    for app in 'StatusMonitor/StatusMonitor.app' 'BackGrounder/Canon 2900 BackGrounder.app'; do
+        codesign --verify --deep --strict --all-architectures "$root$RUNTIME/$app"
+    done
+}
+check_owned_paths() {
+    scratch=$(mktemp -d /private/tmp/lbp2900-owned.XXXXXX)
+    trap 'rm -R "$scratch"' EXIT HUP INT TERM
+    cp "$root$SUPPORT/installed-paths.txt" "$scratch/expected"
+    [ ! -e "$root$SUPPORT/queue-uri" ] || printf '%s\n' "${SUPPORT#/}/queue-uri" >> "$scratch/expected"
+    sort -o "$scratch/expected" "$scratch/expected"
+    (cd "${root:-/}" && find "${RUNTIME#/}" "${SUPPORT#/}" "${PPD#/}" \
+        usr/libexec/cups/backend/lb29u2 "${AGENT#/}" \( -type f -o -type l \) -print) | sort > "$scratch/actual"
+    cmp -s "$scratch/expected" "$scratch/actual" || fail 'Unrecognized files exist in the private runtime; nothing removed.'
+    rm -R "$scratch"
+    trap - EXIT HUP INT TERM
+}
+root_required() { [ "$(id -u)" -eq 0 ] || fail 'Run this command with sudo.'; }
+private_pids() {
+    # CCPD execs the USB monitor with a bare argv[0], so ps paths alone miss it.
+    {
+        ps -axo pid=,command= | awk -v base="$root$RUNTIME/" '
+            {pid=$1; $1=""; sub(/^ +/, ""); if (index($0, base)==1) print pid}'
+        lsof -nP -a -d txt -t "$root$RUNTIME/Bidi/lb29monitor" 2>/dev/null || :
+    } | sort -nu
+}
+official_monitor_pids() {
+    # A removed CUPS queue can leave its Canon monitor holding this USB device.
+    for pid in $(ps -axo pid=,command= | awk -v target="--printer-uri=$1" '
+        {for (i=2; i<=NF; i++) if ($i==target) {print $1; break}}'); do
+        if lsof -nP -a -p "$pid" -d txt -Fn 2>/dev/null | awk -v base="n$root/Library/Printers/Canon/" '
+            index($0, base "CUPSCAPT2/Bidi/")==1 || index($0, base "CUPSCAPT/Bidi/")==1 {found=1}
+            END {exit !found}'; then
+            printf '%s\n' "$pid"
+        fi
+    done
+}
+case "${1:-}" in
+preflight)
+    [ "$#" -le 2 ] || fail 'Usage: preflight [absolute extraction root]'
+    set_root "${2:-/}"
+    owned_paths | while IFS= read -r path; do
+        if [ -e "$root$path" ] || [ -L "$root$path" ]; then
+            fail "Existing path: $path. Remove the previous LBP2900 driver installation using its helper first."
+        fi
+    done
+    if [ -z "$root" ] && lsof -nP -iTCP:59290 -iTCP:59390 -sTCP:LISTEN >/dev/null 2>&1; then
+        fail 'Ports 59290/59390 are already in use.'
+    fi
+    ;;
+check)
+    [ "$#" -le 2 ] || fail 'Usage: check [absolute extraction root]'
+    set_root "${2:-/}"
+    check
+    ;;
+configure-connected)
+    root_required
+    set_root
+    [ "$#" -eq 1 ] || fail 'Usage: configure-connected'
+    check
+    # A fresh install may create one queue, but must never take over an existing one.
+    if lpstat -v "$QUEUE" >/dev/null 2>&1 && [ ! -f "$SUPPORT/queue-uri" ]; then
+        echo 'An existing Canon_LBP2900 queue needs manual review; no queue changed.'
+        exit 0
+    fi
+    devices=$(lpinfo -v | awk '$1=="direct" && $2 ~ /^usb:\/\/Canon\/LBP2900\?serial=[A-Za-z0-9%._~-]+$/ {print $2}' | sort -u)
+    count=$(printf '%s\n' "$devices" | awk 'NF {n++} END {print n+0}')
+    if [ "$count" -ne 1 ]; then
+        echo 'Connect one powered-on LBP2900, then run this helper with configure-connected.'
+        exit 0
+    fi
+    exec "$0" configure "$devices"
+    ;;
+configure)
+    root_required
+    set_root
+    [ "$#" -eq 2 ] || fail 'Usage: configure usb://Canon/LBP2900?serial=...'
+    case "$2" in 'usb://Canon/LBP2900?serial='?*) ;; *) fail 'Expected the exact LBP2900 USB URI from lpinfo -v.';; esac
+    printf '%s' "$2" | /usr/bin/grep -Eq '^usb://Canon/LBP2900\?serial=[A-Za-z0-9%._~-]+$' || fail 'Unexpected USB URI characters.'
+    check
+    URI="lb29u2://localhost:59290/usbSP/${2#usb://}"
+    if lpstat -v 2>/dev/null | /usr/bin/grep -F "cnbma2://localhost:59687/usbSP/${2#usb://}" >/dev/null; then
+        fail 'This printer still has an official-runtime CAPT queue. Finish all jobs in Canon Utility and remove that queue before switching runtimes.'
+    fi
+    [ -z "$(official_monitor_pids "$2")" ] || fail 'The old Canon USB monitor is still running for this printer. After removing its old queue and finishing all Canon jobs, sign out and back in, then retry. No queue was changed.'
+    if lpstat -v "$QUEUE" >/dev/null 2>&1; then
+        [ -f "$SUPPORT/queue-uri" ] || fail 'Existing queue is not owned by this helper.'
+        [ "$(cat "$SUPPORT/queue-uri")" = "$URI" ] || fail 'Existing queue belongs to another printer.'
+        [ "$(lpstat -v "$QUEUE")" = "device for $QUEUE: $URI" ] || fail 'Queue URI was changed.'
+        [ -z "$(lpstat -o "$QUEUE")" ] || fail 'Finish or cancel pending jobs first.'
+    fi
+    lpadmin -p "$QUEUE" -v "$URI" -P "$PPD" -D 'Canon LBP2900' -E \
+        -o printer-is-shared=false -o printer-error-policy=stop-printer
+    printf '%s\n' "$URI" > "$SUPPORT/queue-uri"
+    chmod 600 "$SUPPORT/queue-uri"
+    console_uid=$(stat -f %u /dev/console)
+    if [ "$console_uid" -ge 500 ]; then
+        launchctl enable "gui/$console_uid/$LABEL"
+        if ! launchctl print "gui/$console_uid/$LABEL" >/dev/null 2>&1; then
+            launchctl bootstrap "gui/$console_uid" "$AGENT"
+        fi
+    else
+        echo 'Sign into the desktop to start the LBP2900 status service.'
+    fi
+    echo "Created $QUEUE. Open Printer Utility in macOS printer settings."
+    ;;
+remove)
+    [ "$#" -le 2 ] || fail 'Usage: remove [absolute extraction root]'
+    set_root "${2:-/}"
+    [ -n "$root" ] || root_required
+    check
+    check_owned_paths
+    if [ -z "$root" ] && lpstat -v 2>/dev/null | /usr/bin/grep -q 'lb29u2://'; then
+        fail 'Finish all jobs in Canon Utility, then remove queues using this driver before removing the runtime.'
+    fi
+    if [ -z "$root" ]; then
+    # Unload only our label, including other currently logged-in GUI sessions.
+    for console_uid in $(ps -axo uid= | sort -nu); do
+        if launchctl print "gui/$console_uid/$LABEL" >/dev/null 2>&1; then
+            launchctl bootout "gui/$console_uid/$LABEL"
+        fi
+    done
+    pids=$(private_pids)
+    if [ -n "$pids" ]; then
+        for pid in $pids; do
+            kill -TERM "$pid" 2>/dev/null || ! kill -0 "$pid" 2>/dev/null || fail "Cannot stop owned process $pid; runtime retained."
+        done
+        attempts=0
+        while :; do
+            remaining=
+            for pid in $pids; do
+                if kill -0 "$pid" 2>/dev/null; then remaining="$remaining $pid"; fi
+            done
+            [ -n "$remaining" ] || break
+            [ "$attempts" -lt 15 ] || fail "Owned processes did not stop:$remaining; runtime retained."
+            sleep 1
+            attempts=$((attempts + 1))
+        done
+    fi
+    fi
+    /bin/rm -R "$root$RUNTIME"
+    /bin/rm "$root$PPD" "$root/usr/libexec/cups/backend/lb29u2" "$root$AGENT"
+    /bin/rm -R "$root$SUPPORT"
+    [ -n "$root" ] || pkgutil --forget local.canon-lbp2900.capt10.standalone
+    echo 'LBP2900 runtime removed. Official Canon files and queues were not changed.'
+    ;;
+*) fail 'Usage: lbp2900-standalone preflight|check|remove [root] | configure-connected | configure USB_URI';;
+esac

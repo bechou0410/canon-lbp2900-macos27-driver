@@ -1,0 +1,423 @@
+{
+  "Library/Printers/Canon/CUPSCAPT2/BackGrounder/Canon CAPT BackGrounder.app/Contents/MacOS/Canon CAPT BackGrounder": {
+    "sha256": "9bbeede298dcea4bd04be72d545ea5cf5178af3b4702092e5fd6b2aca3ab4bb2",
+    "strings": {
+      "CUPSCAPT2": 8,
+      "/Canon/CUPSCAPT": 4,
+      "cnbma2": 6,
+      "localhost:59687": 4,
+      "\u0000capt\u0000": 2
+    },
+    "instructions": [
+      {
+        "arch": "arm64",
+        "address": "100003dd8",
+        "before": "63 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "arm64",
+        "address": "100007cd8",
+        "before": "68 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "arm64",
+        "address": "100007e30",
+        "before": "e8 24 9d 52",
+        "port": 59687
+      },
+      {
+        "arch": "arm64",
+        "address": "1000092ec",
+        "before": "63 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "100003288",
+        "before": "b9 8b e9 00 00",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "1000073c4",
+        "before": "41 be 8b e9 00 00",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "100007524",
+        "before": "41 be 27 e9 00 00",
+        "port": 59687
+      },
+      {
+        "arch": "x86_64",
+        "address": "100008bdb",
+        "before": "b9 8b e9 00 00",
+        "port": 59787
+      }
+    ]
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Bidi/captmoncnab3": {
+    "sha256": "2d8e88204e655aabe9fac9b21fc58e007983ed07f6b6cbd2daa95cc7d580a283",
+    "strings": {
+      "CUPSCAPT2": 6,
+      "\u0000MDL:LBP3000;\u0000": 2,
+      "\u0000capt\u0000": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Bins/capdftopdl": {
+    "sha256": "d3770e4edb737b1d1139e7c227ccd37f3dc66b99597bd9d7bda9c1e3a47eba9f",
+    "strings": {},
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Bins/xdclfilter": {
+    "sha256": "572255898cdbebb55227b07a55c6cd583e7f4a6caf681a60e5932d852e7a51c6",
+    "strings": {
+      "CUPSCAPT2": 16
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/CCPD/ccpd": {
+    "sha256": "31d9cbc6656a61fbdebcb3d30cb6e2947139de4278b381d74c6774788f3517dc",
+    "strings": {
+      "cnbma2": 4,
+      "localhost:59687": 2,
+      "/var/ccpd/fifo0": 2
+    },
+    "instructions": [
+      {
+        "arch": "arm64",
+        "address": "10000b4c0",
+        "before": "68 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "arm64",
+        "address": "10000b4c8",
+        "before": "e8 24 9d 52",
+        "port": 59687
+      },
+      {
+        "arch": "arm64",
+        "address": "10000b88c",
+        "before": "68 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "arm64",
+        "address": "10000b894",
+        "before": "e8 24 9d 52",
+        "port": 59687
+      },
+      {
+        "arch": "x86_64",
+        "address": "100008c8e",
+        "before": "c7 43 04 8b e9 00 00",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "100008c95",
+        "before": "c7 83 68 04 00 00 27 e9 00 00",
+        "port": 59687
+      },
+      {
+        "arch": "x86_64",
+        "address": "1000090d3",
+        "before": "41 c7 46 04 8b e9 00 00",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "1000090db",
+        "before": "41 c7 86 68 04 00 00 27 e9 00 00",
+        "port": 59687
+      }
+    ]
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/ColorGearCMMC.bundle/Contents/MacOS/ColorGearCMMC": {
+    "sha256": "64d59f9971e7dab2483f30b3416647b32b519af4ae2c92f3427a45850ec6f6df",
+    "strings": {
+      "jp.co.canon.ColorGearCMMC": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/caiocaptnet.dylib": {
+    "sha256": "6514c72892ffb95da3df90b3861695390e056bb4a727f2fdc16983d5635e3895",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/caiousb.dylib": {
+    "sha256": "1a452d9b94285fbbab471931fa9ed9cc1a07f2e8d999aa07598830c01eab2cc1",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libEnoJPEG4.dylib": {
+    "sha256": "d83db3281c385d6fb665be56a773e47d4c0ad7b30bc41a4e6a0bb7cdeeea3c7c",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libMacFontEngine.dylib": {
+    "sha256": "b9c627de43c2b6917cc5f996f164e400165fba6742134f95b17e25bacd7bba85",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libMacFontEngine_cupscapt.framework/Versions/A/libMacFontEngine_cupscapt": {
+    "sha256": "9870211324d3ba02bd17b4574e5adea248d1431720703b15ab6dc4e61eb3fae4",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libaquaservice.dylib": {
+    "sha256": "61d665e1e08cc1adfb3f6b13e7da557a73577b9421ca3a8dda322118b12a7de1",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcaewcm.dylib": {
+    "sha256": "760529006b17df19ca0546f76072061f9a43f91b893c56279484c4a394af55d6",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcaiowrap.dylib": {
+    "sha256": "cc3becc6a18e5376e0eb05ea6a66d3fb96502fb55365e45b84ef9c54106dbbd5",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcanon_common.dylib": {
+    "sha256": "c40959e031ab830a31a27f0bcb5c31e9519076649d78f1d7b9a036066a1a488d",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcanon_slim.dylib": {
+    "sha256": "7c43feebbe8b7347e026b3852f378b8bc31284d3838a17b1188df23801d4e484",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcaptfilter2.dylib": {
+    "sha256": "2f3e6ab848e566fbdc182d4a57dacbf3ef0b188949c0a68236a61d0bffe8c1b3",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": [
+      {
+        "arch": "arm64",
+        "address": "bdc4",
+        "before": "63 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "arm64",
+        "address": "d4c8",
+        "before": "63 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "9a80",
+        "before": "b9 8b e9 00 00",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "b2b8",
+        "before": "b9 8b e9 00 00",
+        "port": 59787
+      }
+    ]
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcnaccm.dylib": {
+    "sha256": "e5f5cd675208a53e2658cb307c666e9cfbc3181fb14be0de55c02ed32b90af92",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcncaptnpm.dylib": {
+    "sha256": "15f5453a19f4d91ac993a7ca774e54b193e45f880329798fa8a1aa3a954be382",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libcoral.dylib": {
+    "sha256": "8746274ec641cabe77c9591b913c8eb42adc9a80f81b7d7454a37016791389ea",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libgcm.dylib": {
+    "sha256": "584b7e56fe2d08eaa43c13392771fd7d7225eea6ccd377e8d2f189b0cb6f920a",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libgpt-pdf.dylib": {
+    "sha256": "5f94109785ce9e0fffc40a1a06877411562d7ed35c482e1809b84bb67883212d",
+    "strings": {
+      "CUPSCAPT2": 2
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libguam.dylib": {
+    "sha256": "b1818d36f5821cae507b563a31b42b12d9b27e139decbb9848c5a7b101973f32",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libudi_bdlwriter.dylib": {
+    "sha256": "cf7a304fb9b4e6465e5e20c1d55dbfab8de372f6d52b6133236262318e3ea4e9",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libudi_bdlwriter_Raster.dylib": {
+    "sha256": "62ae961f00b47704bc81eb5ca6f71758f3b40a6d64ac1ad05f6ca32d860882e7",
+    "strings": {
+      "CUPSCAPT2": 8
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libudi_colorudi.dylib": {
+    "sha256": "be10376f3c8a9b997f72e0067cdcfe5a4c1312f41d32e9868b98d4e9eec052a6",
+    "strings": {
+      "CUPSCAPT2": 8
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libudi_lbm.dylib": {
+    "sha256": "97670ae67dd0cb0a59105ca4c84af49c807ff3c140f5e59ca4989cb4aaa3f82d",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libudi_orca.dylib": {
+    "sha256": "b642e528d48b2c1e7414d431226cf307e5e627cc674d9deda324dd918e3654a9",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/Libs/libxpi_pdfrip.dylib": {
+    "sha256": "edf409d8875f7c130aefcaf075c539f9222567f8a0d45f80a7db9298a6203e94",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/PDEs/CAPTUIKit.framework/Versions/A/CAPTUIKit": {
+    "sha256": "244a7aa29c976dcaa06fe7899dad1069c503250ceaff01c4ad19420cfd62c142",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/PDEs/FinishingPDE.plugin/Contents/MacOS/FinishingPDE": {
+    "sha256": "972102bd0818664e0b70e55c28cb006dcb908fe6df6767282f98da4434c9de42",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/PDEs/InputTrayPDE.plugin/Contents/MacOS/InputTrayPDE": {
+    "sha256": "441951096c718dfcbe5b22c645a51f12413c468d37881310d528a80cb7df7d85",
+    "strings": {
+      "CUPSCAPT2": 4
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/PDEs/QualitySetPDE.plugin/Contents/MacOS/QualitySetPDE": {
+    "sha256": "661672d9309073cf46ecc04e3ef91302570adcc72f037e2bda934ffdec6de27c",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/PDEs/VersionPDE.plugin/Contents/MacOS/VersionPDE": {
+    "sha256": "8cf693e3f8b8692c2f7a574a4291d0fc558e016af36122ec3f42d074833d6047",
+    "strings": {
+      "CUPSCAPT2": 6
+    },
+    "instructions": []
+  },
+  "Library/Printers/Canon/CUPSCAPT2/StatusMonitor/StatusMonitor.app/Contents/MacOS/StatusMonitor": {
+    "sha256": "9eeeadf935951124442b4adaf989954a0812c638b9be75d1ae4c8255b38bb3b5",
+    "strings": {
+      "CUPSCAPT2": 4,
+      "cnbma2": 4,
+      "localhost:59687": 2
+    },
+    "instructions": [
+      {
+        "arch": "arm64",
+        "address": "10002e464",
+        "before": "68 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "100032533",
+        "before": "41 c7 86 00 12 00 00 8b e9 00 00",
+        "port": 59787
+      }
+    ]
+  },
+  "usr/libexec/cups/backend/cnbma2": {
+    "sha256": "04f1b0de5e38bd8683fd7220c0c7ada1569d13bf1980f97b47c7fc34a799b800",
+    "strings": {
+      "cnbma2": 10
+    },
+    "instructions": [
+      {
+        "arch": "arm64",
+        "address": "100005bd8",
+        "before": "61 31 9d 52",
+        "port": 59787
+      },
+      {
+        "arch": "arm64",
+        "address": "100005fb0",
+        "before": "e1 24 9d 52",
+        "port": 59687
+      },
+      {
+        "arch": "x86_64",
+        "address": "100001fcd",
+        "before": "be 8b e9 00 00",
+        "port": 59787
+      },
+      {
+        "arch": "x86_64",
+        "address": "100002089",
+        "before": "be 27 e9 00 00",
+        "port": 59687
+      }
+    ]
+  }
+}
